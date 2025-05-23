@@ -1,5 +1,8 @@
 {
-  // SQL formatting
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+
+    // SQL formatting
   "sqltools.format": {
     "keywordCase": "upper",     // SELECT instead of select
     "identifierCase": "lower"   // table_name instead of TABLE_NAME

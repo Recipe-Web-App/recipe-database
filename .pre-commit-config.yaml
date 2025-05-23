@@ -1,0 +1,42 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs   # <--- added this one
+
+  - repo: https://github.com/bemeurer/beautysh
+    rev: v6.2.1
+    hooks:
+      - id: beautysh
+        args: [ "--indent-size", "2", "--overwrite" ]
+        files: \.sh$
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        files: \.sh$
+
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.13.1-beta
+    hooks:
+      - id: hadolint
+        files: ^Dockerfile
+
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.4.0
+    hooks:
+      - id: sqlfluff-lint
+        args: [ "--dialect", "postgres" ]
+        files: \.sql$
