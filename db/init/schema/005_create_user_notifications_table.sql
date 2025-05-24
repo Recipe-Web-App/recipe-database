@@ -1,4 +1,4 @@
--- db/init/schema/004_create_user_notifications_table.sql
+-- db/init/schema/005_create_user_notifications_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.user_notifications (
   notification_id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES recipe_manager.users(user_id) ON DELETE CASCADE,

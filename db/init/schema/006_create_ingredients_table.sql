@@ -1,4 +1,4 @@
--- db/init/schema/005_create_ingredients_table.sql
+-- db/init/schema/006_create_ingredients_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.ingredients (
   ingredient_id BIGSERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,

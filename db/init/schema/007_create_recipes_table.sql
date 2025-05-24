@@ -1,4 +1,4 @@
--- db/init/schema/006_create_recipes_table.sql
+-- db/init/schema/007_create_recipes_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.recipes (
   recipe_id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES recipe_manager.users(user_id) ON DELETE CASCADE,

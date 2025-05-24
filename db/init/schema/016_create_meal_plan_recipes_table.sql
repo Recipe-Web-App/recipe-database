@@ -1,4 +1,4 @@
--- db/init/schema/014_create_meal_plan_recipes_table.sql
+-- db/init/schema/016_create_meal_plan_recipes_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.meal_plan_recipes (
   meal_plan_id BIGINT NOT NULL REFERENCES recipe_manager.meal_plans(meal_plan_id) ON DELETE CASCADE,
   recipe_id BIGINT NOT NULL REFERENCES recipe_manager.recipes(recipe_id) ON DELETE CASCADE,

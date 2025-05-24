@@ -1,4 +1,4 @@
--- db/init/schema/002_create_users_table.sql
+-- db/init/schema/003_create_users_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.users (
   user_id UUID PRIMARY KEY,
   username VARCHAR(50) UNIQUE NOT NULL,

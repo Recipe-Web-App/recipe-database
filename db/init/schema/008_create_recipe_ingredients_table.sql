@@ -1,4 +1,4 @@
--- db/init/schema/007_crate_recipe_ingredients_table.sql
+-- db/init/schema/008_crate_recipe_ingredients_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.recipe_ingredients (
   recipe_id BIGINT NOT NULL REFERENCES recipe_manager.recipes(recipe_id) ON DELETE CASCADE,
   ingredient_id BIGINT NOT NULL REFERENCES recipe_manager.ingredients(ingredient_id),
