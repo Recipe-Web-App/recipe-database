@@ -14,7 +14,7 @@ repos:
     rev: v6.2.1
     hooks:
       - id: beautysh
-        args: [ "--indent-size", "2", "--overwrite" ]
+        args: [ "--indent-size", "2" ]
         files: \.sh$
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -23,11 +23,11 @@ repos:
       - id: shellcheck
         files: \.sh$
 
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.13.1-beta
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.37.1
     hooks:
-      - id: hadolint
-        files: ^Dockerfile
+      - id: yamllint
+        files: ^(docker-compose\.ya?ml|compose\.ya?ml)$
 
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.37.1
