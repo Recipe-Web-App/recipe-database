@@ -4,9 +4,8 @@ set -euo pipefail
 
 NAMESPACE="recipe-db"
 CONFIG_DIR="k8s"
-ENV_FILE=".env"
 SECRET_NAME="postgres-secret"
-PASSWORD_ENV_VAR="DB_PASSWORD"
+PASSWORD_ENV_VAR="POSTGRES_PASSWORD"
 
 echo "🔄 Checking if Minikube is running..."
 if ! minikube status >/dev/null 2>&1; then
@@ -19,8 +18,11 @@ fi
 echo "📂 Ensuring namespace '${NAMESPACE}' exists..."
 kubectl get namespace "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$NAMESPACE"
 
-echo "📦 Loading environment from ${ENV_FILE}..."
-export "$(grep -v '^#' "$ENV_FILE" | xargs)"
+# Load environment variables
+if [ -f .env ]; then
+  # shellcheck disable=SC1091
+  source .env
+fi
 
 echo "⚙️ Creating/Updating ConfigMap from env..."
 envsubst < "${CONFIG_DIR}/configmap-template.yaml" | kubectl apply -f -
@@ -61,5 +63,5 @@ echo "📡 Access info:"
 echo "  Pod: $POD_NAME"
 echo "  Host: postgres.$NAMESPACE.svc.cluster.local"
 echo "  Port: 5432"
-echo "  User: $DB_USER"
-echo "  DB:   $DB_NAME"
+echo "  User: $POSTGRES_USER"
+echo "  DB:   $POSTGRES_DB"

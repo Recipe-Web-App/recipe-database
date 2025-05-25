@@ -11,4 +11,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER validate_rating_range BEFORE
 INSERT
   OR
-UPDATE ON recipe_manager.recipe_reviews FOR EACH ROW EXECUTE FUNCTION recipe_manager.enforce_rating_bounds();
+UPDATE ON recipe_manager.reviews FOR EACH ROW EXECUTE FUNCTION recipe_manager.enforce_rating_bounds();

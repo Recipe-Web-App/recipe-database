@@ -10,4 +10,4 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 CREATE TRIGGER prevent_self_review BEFORE
-INSERT ON recipe_manager.recipe_reviews FOR EACH ROW EXECUTE FUNCTION recipe_manager.prevent_reviewing_own_recipe();
+INSERT ON recipe_manager.reviews FOR EACH ROW EXECUTE FUNCTION recipe_manager.prevent_reviewing_own_recipe();

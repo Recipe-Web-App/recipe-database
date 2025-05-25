@@ -1,5 +1,5 @@
--- db/fixtures/user_follows.sql
-INSERT INTO recipe_manager.user_follows (follower_user_id, followed_user_id, followed_at)
+-- db/fixtures/002_user_follows.sql
+INSERT INTO recipe_manager.user_follows (follower_id, followee_id, followed_at)
 VALUES (
     '11111111-1111-1111-1111-111111111111',
     '22222222-2222-2222-2222-222222222222',

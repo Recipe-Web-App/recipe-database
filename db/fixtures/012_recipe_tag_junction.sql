@@ -1,4 +1,4 @@
--- db/fixtures/recipe_tag_junction.sql
+-- db/fixtures/012_recipe_tag_junction.sql
 INSERT INTO recipe_manager.recipe_tag_junction (recipe_id, tag_id)
 VALUES (1, 1),
   -- Pancakes tagged as Breakfast

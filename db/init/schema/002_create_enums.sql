@@ -1,6 +1,6 @@
 -- db/init/schema/002_create_enums.sql
 -- Enum for ingredient units
-DO $$ BEGIN CREATE TYPE recipe_manager.unit_enum AS ENUM (
+DO $$ BEGIN CREATE TYPE recipe_manager.ingredient_unit_enum AS ENUM (
   'g',
   'kg',
   'oz',
@@ -32,7 +32,7 @@ EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for recipe revision types
-DO $$ BEGIN CREATE TYPE recipe_manager.revision_type_enum AS ENUM ('added', 'modified', 'removed');
+DO $$ BEGIN CREATE TYPE recipe_manager.revision_type_enum AS ENUM ('ADD', 'UPDATE', 'DELETE');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;

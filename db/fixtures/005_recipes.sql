@@ -1,4 +1,4 @@
--- db/fixtures/recipes.sql
+-- db/fixtures/005_recipes.sql
 INSERT INTO recipe_manager.recipes (
     recipe_id,
     user_id,

@@ -1,4 +1,4 @@
--- db/fixtures/recipe_steps.sql
+-- db/fixtures/007_recipe_steps.sql
 INSERT INTO recipe_manager.recipe_steps (step_id, recipe_id, step_number, instruction)
 VALUES (DEFAULT, 1, 1, 'Mix flour and sugar together.'),
   (

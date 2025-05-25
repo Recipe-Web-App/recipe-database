@@ -4,7 +4,7 @@ set -euo pipefail
 
 NAMESPACE="recipe-db"
 POD_LABEL="app=postgres"
-LOCAL_PORT=5432
+LOCAL_PORT=15432
 
 # Load .env vars into shell variables safely
 if [ -f .env ]; then
@@ -12,20 +12,20 @@ if [ -f .env ]; then
   source .env
 fi
 
-DB_USER=${DB_USER:-}
-DB_NAME=${DB_NAME:-}
-DB_PASSWORD=${DB_PASSWORD:-}
+POSTGRES_USER=${POSTGRES_USER:-}
+POSTGRES_DB=${POSTGRES_DB:-}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
 
-if [ -z "$DB_USER" ]; then
-  read -rp "Enter DB user: " DB_USER
+if [ -z "$POSTGRES_USER" ]; then
+  read -rp "Enter DB user: " POSTGRES_USER
 fi
 
-if [ -z "$DB_NAME" ]; then
-  read -rp "Enter DB name: " DB_NAME
+if [ -z "$POSTGRES_DB" ]; then
+  read -rp "Enter DB name: " POSTGRES_DB
 fi
 
-if [ -z "$DB_PASSWORD" ]; then
-  read -s -rp "Enter DB password: " DB_PASSWORD
+if [ -z "$POSTGRES_PASSWORD" ]; then
+  read -s -rp "Enter DB password: " POSTGRES_PASSWORD
   echo
 fi
 
@@ -44,9 +44,13 @@ PF_PID=$!
 
 sleep 3 # give port-forward time to start
 
+echo "📂 Defaulting to schema: $POSTGRES_SCHEMA"
 echo "🔐 Starting psql client..."
 
-PGPASSWORD="$DB_PASSWORD" psql -h localhost -p $LOCAL_PORT -U "$DB_USER" -d "$DB_NAME"
+PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
+  PGPASSWORD="$POSTGRES_PASSWORD" \
+  psql -h localhost -p $LOCAL_PORT -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+
 
 echo "🛑 Closing port-forward (PID $PF_PID)..."
 kill $PF_PID

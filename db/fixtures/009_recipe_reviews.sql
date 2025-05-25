@@ -1,5 +1,5 @@
--- db/fixtures/recipe_reviews.sql
-INSERT INTO recipe_manager.recipe_reviews (
+-- db/fixtures/008_recipe_reviews.sql
+INSERT INTO recipe_manager.reviews (
     review_id,
     recipe_id,
     user_id,

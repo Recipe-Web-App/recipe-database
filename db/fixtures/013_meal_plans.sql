@@ -1,8 +1,8 @@
--- db/fixtures/meal_plans.sql
+-- db/fixtures/013_meal_plans.sql
 INSERT INTO recipe_manager.meal_plans (
     meal_plan_id,
     user_id,
-    plan_name,
+    name,
     start_date,
     end_date,
     created_at,

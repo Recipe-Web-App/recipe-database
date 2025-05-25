@@ -1,12 +1,12 @@
 -- db/init/functions/get_user_meal_plans.sql
 CREATE OR REPLACE FUNCTION recipe_manager.get_user_meal_plan(uid BIGINT, week_start DATE) RETURNS TABLE (
     meal_date DATE,
-    meal_type recipe_manager.meal_type,
+    meal_type recipe_manager.meal_type_enum,
     recipe_id BIGINT,
     recipe_title TEXT
   ) AS $$ BEGIN RETURN QUERY
 SELECT mpr.meal_date,
-  mpr.meal_type,
+  mpr.meal_type_enum,
   r.recipe_id,
   r.title
 FROM recipe_manager.meal_plan_recipes mpr

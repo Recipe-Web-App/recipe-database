@@ -20,7 +20,7 @@ FROM recipe_manager.recipes r
   LEFT JOIN recipe_manager.recipe_ingredients ri ON r.recipe_id = ri.recipe_id
   LEFT JOIN recipe_manager.ingredients i ON ri.ingredient_id = i.ingredient_id
   LEFT JOIN recipe_manager.recipe_steps s ON r.recipe_id = s.recipe_id
-  LEFT JOIN recipe_manager.recipe_reviews rv ON r.recipe_id = rv.recipe_id
+  LEFT JOIN recipe_manager.reviews rv ON r.recipe_id = rv.recipe_id
 GROUP BY r.recipe_id,
   i.ingredient_id,
   ri.quantity,

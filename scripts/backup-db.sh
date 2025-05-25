@@ -1,30 +1,33 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Load environment variables
-set -o allexport
-# Load .env vars into shell variables safely
 if [ -f .env ]; then
   # shellcheck disable=SC1091
   source .env
 fi
-set +o allexport
 
 # Set timestamp and filename
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_DIR="$(dirname "$0")"
+BACKUP_DIR="$(dirname "$0")/../db/backups"
 BACKUP_FILE="$BACKUP_DIR/recipe_backup_$DATE.sql"
 
-# Dump only the recipe_manager schema
-echo "Creating backup at $BACKUP_FILE..."
+# Ensure backup directory exists
+mkdir -p "$BACKUP_DIR"
 
-# Check if successful
-if PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
-  -h "$POSTGRES_HOST" \
-  -U "$POSTGRES_USER" \
-  -d "$POSTGRES_DB" \
-  -n recipe_manager \
-  -F p \
-  -f "$BACKUP_FILE"; then
+echo "🚀 Finding PostgreSQL pod in namespace recipe-db..."
+POD_NAME=$(kubectl get pods -n recipe-db -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+
+if [ -z "$POD_NAME" ]; then
+  echo "❌ No PostgreSQL pod found in namespace recipe-db with label app=postgres"
+  exit 1
+fi
+
+echo "📦 Creating backup from pod '$POD_NAME' into local file '$BACKUP_FILE'..."
+
+if kubectl exec -n recipe-db "$POD_NAME" -- \
+  bash -c "PGPASSWORD='$POSTGRES_PASSWORD' pg_dump -U '$POSTGRES_USER' -d '$POSTGRES_DB' -n recipe_manager" > "$BACKUP_FILE"; then
   echo "✅ Backup completed successfully."
 else
   echo "❌ Backup failed."

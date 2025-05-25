@@ -1,4 +1,4 @@
--- db/fixtures/user_notifications.sql
+-- db/fixtures/003_user_notifications.sql
 INSERT INTO recipe_manager.user_notifications (
     notification_id,
     user_id,

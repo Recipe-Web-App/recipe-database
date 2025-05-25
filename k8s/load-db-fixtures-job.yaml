@@ -1,0 +1,47 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init-job
+  namespace: recipe-db
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: db-init
+          image: postgres:14
+          env:
+            - name: POSTGRES_HOST
+              value: postgres
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: sql-volume
+              mountPath: /sql
+            - name: scripts-volume
+              mountPath: /scripts
+          command: ["bash", "-c", "/scripts/init-db.sh"]
+      volumes:
+        - name: sql-volume
+          hostPath:
+            path: /mnt/recipe-database/db
+            type: Directory
+        - name: scripts-volume
+          hostPath:
+            path: /mnt/recipe-database/scripts
+            type: Directory
+  backoffLimit: 1

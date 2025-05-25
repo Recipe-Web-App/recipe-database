@@ -5,7 +5,7 @@ SELECT r.recipe_id,
   ROUND(AVG(rv.rating)::NUMERIC, 1) AS avg_rating,
   COUNT(rv.rating) AS review_count
 FROM recipe_manager.recipes r
-  JOIN recipe_manager.recipe_reviews rv ON r.recipe_id = rv.recipe_id
+  JOIN recipe_manager.reviews rv ON r.recipe_id = rv.recipe_id
 GROUP BY r.recipe_id,
   r.title
 HAVING COUNT(rv.rating) >= 3
