@@ -2,14 +2,14 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: db-init-job
+  name: db-load-test-fixtures-job
   namespace: recipe-db
 spec:
   template:
     spec:
       restartPolicy: Never
       containers:
-        - name: db-init
+        - name: db-load-test-fixtures
           image: postgres:14
           env:
             - name: POSTGRES_HOST
@@ -37,7 +37,7 @@ spec:
               mountPath: /sql
             - name: scripts-volume
               mountPath: /scripts
-          command: ["bash", "-c", "/scripts/init-db.sh"]
+          command: ["bash", "-c", "/scripts/jobHelpers/db-load-test-fixtures.sh"]
       volumes:
         - name: sql-volume
           hostPath:

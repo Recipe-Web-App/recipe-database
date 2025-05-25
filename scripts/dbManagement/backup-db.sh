@@ -12,7 +12,7 @@ fi
 
 # Set timestamp and filename
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_DIR="$(dirname "$0")/../db/backups"
+BACKUP_DIR="$(dirname "$0")/../../db/backups"
 BACKUP_FILE="$BACKUP_DIR/recipe_backup_$DATE.sql"
 
 # Ensure backup directory exists

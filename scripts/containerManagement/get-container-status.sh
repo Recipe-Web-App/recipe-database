@@ -5,9 +5,9 @@ set -euo pipefail
 NAMESPACE="recipe-db"
 DEPLOYMENT="postgres-deployment"
 SERVICE="postgres-service"
-JOB="db-init-job"
+JOB="db-load-schema-job"
 MOUNT_PATH="/mnt/recipe-database"
-LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH}"
 
 # Get terminal width or fallback to 80

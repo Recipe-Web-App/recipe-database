@@ -2,10 +2,10 @@
 set -euo pipefail
 
 MOUNT_PATH="/mnt/recipe-database"
-LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-JOB_NAME="load-db-test-fixtures-job"
+LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+JOB_NAME="db-load-test-fixtures-job"
 NAMESPACE="recipe-db"
-YAML_PATH="${LOCAL_PATH}/k8s/load-db-test-fixtures-job.yaml"
+YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-load-test-fixtures-job.yaml"
 MOUNT_PORT=8787
 
 # Start Minikube mount in background if not already running

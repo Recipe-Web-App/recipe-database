@@ -4,7 +4,7 @@ set -euo pipefail
 
 NAMESPACE="recipe-db"
 MOUNT_PATH="/mnt/recipe-database"
-LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH}"
 
 echo "⏹️ Stopping PostgreSQL deployment in namespace: $NAMESPACE"
