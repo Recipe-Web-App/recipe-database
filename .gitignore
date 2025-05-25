@@ -4,4 +4,3 @@
 db/backups/*
 !db/backups/.gitkeep
 data/*
-!data/.gitkeep

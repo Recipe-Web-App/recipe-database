@@ -12,6 +12,9 @@ if [ -f .env ]; then
   set +o allexport
 fi
 
+# Make sure export directory exists
+mkdir -p "$(dirname "$EXPORT_PATH")"
+
 echo "📦 Exporting schema from PostgreSQL pod..."
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres -o jsonpath="{.items[0].metadata.name}")
