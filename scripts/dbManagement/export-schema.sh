@@ -1,25 +1,49 @@
 #!/bin/bash
+# scripts/dbManagement/export-schema.sh
+
 set -euo pipefail
+
+# Utility function for printing section separators
+print_separator() {
+  printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
+}
 
 NAMESPACE="recipe-db"
 EXPORT_PATH="./data/schema.sql"
 
-# Load env vars from .env
+print_separator
+echo "📥 Loading environment variables..."
+print_separator
+
 if [ -f .env ]; then
   # shellcheck disable=SC1091
   set -o allexport
   source .env
   set +o allexport
+  echo "✅ Environment variables loaded."
+else
+  echo "ℹ️ No .env file found. Proceeding without loading environment variables."
 fi
 
-# Make sure export directory exists
-mkdir -p "$(dirname "$EXPORT_PATH")"
-
-echo "📦 Exporting schema from PostgreSQL pod..."
+print_separator
+echo "📦 Exporting schema from PostgreSQL pod in namespace '$NAMESPACE'..."
+print_separator
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres -o jsonpath="{.items[0].metadata.name}")
 
-kubectl exec -n "$NAMESPACE" "$POD_NAME" -- bash -c \
-  "PGPASSWORD='$POSTGRES_PASSWORD' pg_dump -U $POSTGRES_USER -d $POSTGRES_DB --schema-only" > "$EXPORT_PATH"
+if [ -z "$POD_NAME" ]; then
+  echo "❌ No PostgreSQL pod found in namespace '$NAMESPACE' with label app=postgres"
+  exit 1
+fi
 
-echo "✅ Schema exported to: $EXPORT_PATH"
+mkdir -p "$(dirname "$EXPORT_PATH")"
+
+if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- bash -c \
+  "PGPASSWORD='$POSTGRES_PASSWORD' pg_dump -U $POSTGRES_USER -d $POSTGRES_DB --schema-only" > "$EXPORT_PATH"; then
+  echo "✅ Schema exported successfully to: $EXPORT_PATH"
+else
+  echo "❌ Failed to export schema."
+  exit 1
+fi
+
+print_separator
