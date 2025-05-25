@@ -1,2 +1,7 @@
 *.env*
 !.env.example
+
+db/backups/*
+!db/backups/.gitkeep
+data/*
+!data/.gitkeep
