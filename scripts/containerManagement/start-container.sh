@@ -1,11 +1,13 @@
 #!/bin/bash
-
 set -euo pipefail
 
 NAMESPACE="recipe-db"
 CONFIG_DIR="k8s"
 SECRET_NAME="postgres-secret"
 PASSWORD_ENV_VAR="POSTGRES_PASSWORD"
+MOUNT_PATH="/mnt/recipe-database"
+LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+MOUNT_PORT=8787
 
 echo "🔄 Checking if Minikube is running..."
 if ! minikube status >/dev/null 2>&1; then
@@ -58,6 +60,16 @@ kubectl wait --namespace="$NAMESPACE" \
   --timeout=90s
 
 echo "✅ PostgreSQL is up and running in namespace '$NAMESPACE'."
+
+# Start Minikube mount in background if not already running
+if ! pgrep -f "minikube mount ${LOCAL_PATH}:${MOUNT_PATH} --port=${MOUNT_PORT}" > /dev/null; then
+  echo "🔗 Starting Minikube mount on port ${MOUNT_PORT}..."
+  nohup minikube mount "${LOCAL_PATH}:${MOUNT_PATH}" --port="${MOUNT_PORT}" > /tmp/minikube-mount.log 2>&1 &
+  echo "⏳ Waiting for Minikube mount to be ready..."
+  sleep 5
+else
+  echo "✅ Minikube mount already running on port ${MOUNT_PORT}."
+fi
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres -o jsonpath="{.items[0].metadata.name}")
 
