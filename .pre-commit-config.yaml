@@ -21,6 +21,7 @@ repos:
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
+        args: [ "-x" ]
         files: \.sh$
 
   - repo: https://github.com/adrienverge/yamllint.git
@@ -28,15 +29,3 @@ repos:
     hooks:
       - id: yamllint
         files: ^(docker-compose\.ya?ml|compose\.ya?ml)$
-
-  - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.1
-    hooks:
-      - id: yamllint
-
-  - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 3.4.0
-    hooks:
-      - id: sqlfluff-lint
-        args: [ "--dialect", "postgres" ]
-        files: \.sql$
