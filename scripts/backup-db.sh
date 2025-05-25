@@ -5,7 +5,9 @@ set -euo pipefail
 # Load environment variables
 if [ -f .env ]; then
   # shellcheck disable=SC1091
+  set -o allexport
   source .env
+  set +o allexport
 fi
 
 # Set timestamp and filename

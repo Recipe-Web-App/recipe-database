@@ -27,6 +27,8 @@ kubectl delete -f k8s/service.yaml -n "$NAMESPACE" --ignore-not-found
 
 echo "🧹 Deleting database initialization job..."
 kubectl delete job db-init-job -n "$NAMESPACE" --ignore-not-found
+echo "🧹 Deleting database load test fixture job..."
+kubectl delete job load-db-test-fixtures-job -n "$NAMESPACE"
 
 # 🚫 Kill Minikube mount if running
 echo "🔌 Checking for active Minikube mount..."

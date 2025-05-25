@@ -1,6 +1,12 @@
 #!/bin/bash
 
+set -euo pipefail
+
 export PGPASSWORD="$POSTGRES_PASSWORD"
+
+echo "POSTGRES_HOST: $POSTGRES_HOST"
+echo "POSTGRES_DB:   $POSTGRES_DB"
+echo "POSTGRES_USER: $POSTGRES_USER"
 
 echo "🔧 Initializing schema..."
 for f in /sql/init/schema/*.sql; do

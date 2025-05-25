@@ -3,9 +3,9 @@ set -euo pipefail
 
 MOUNT_PATH="/mnt/recipe-database"
 LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-JOB_NAME="db-init-job"
+JOB_NAME="load-db-test-fixtures-job"
 NAMESPACE="recipe-db"
-YAML_PATH="${LOCAL_PATH}/k8s/db-init-job.yaml"
+YAML_PATH="${LOCAL_PATH}/k8s/load-db-test-fixtures-job.yaml"
 MOUNT_PORT=8787
 
 # Start Minikube mount in background if not already running
@@ -19,7 +19,7 @@ else
 fi
 
 # Apply the Kubernetes job
-echo "🚀 Applying database init job..."
+echo "🚀 Applying load database test fixtures job..."
 kubectl apply -f "$YAML_PATH" -n "$NAMESPACE"
 
 # Wait for job to complete or fail
@@ -36,4 +36,4 @@ else
   kubectl logs job/$JOB_NAME -n "$NAMESPACE" || true
 fi
 
-echo "✅ Database initialization complete."
+echo "✅ Database test fixtures loaded."

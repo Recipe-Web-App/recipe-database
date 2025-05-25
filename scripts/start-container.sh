@@ -21,7 +21,9 @@ kubectl get namespace "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "
 # Load environment variables
 if [ -f .env ]; then
   # shellcheck disable=SC1091
+  set -o allexport
   source .env
+  set +o allexport
 fi
 
 echo "⚙️ Creating/Updating ConfigMap from env..."

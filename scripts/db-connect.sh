@@ -9,7 +9,9 @@ LOCAL_PORT=15432
 # Load .env vars into shell variables safely
 if [ -f .env ]; then
   # shellcheck disable=SC1091
+  set -o allexport
   source .env
+  set +o allexport
 fi
 
 POSTGRES_USER=${POSTGRES_USER:-}
