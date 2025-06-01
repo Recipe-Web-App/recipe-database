@@ -76,5 +76,10 @@ PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
 
 print_separator
 echo "🛑 Closing port-forward (PID $PF_PID)..."
-kill "$PF_PID"
+if kill -0 "$PF_PID" 2>/dev/null; then
+  kill "$PF_PID"
+  echo "✅ Port-forward process killed."
+else
+  echo "ℹ️ Port-forward process already stopped."
+fi
 print_separator
