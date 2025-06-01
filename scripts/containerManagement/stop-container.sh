@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/shell/stop-container.sh
+# scripts/containerManagement/stop-container.sh
 
 set -euo pipefail
 

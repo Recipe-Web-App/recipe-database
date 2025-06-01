@@ -55,7 +55,7 @@ echo "🔐 Creating/updating Secret..."
 print_separator
 
 if [ -z "${!PASSWORD_ENV_VAR:-}" ]; then
-  read -r -s -p "Enter db_maint_user PostgreSQL password: " POSTGRES_PASSWORD
+  read -r -s -p "Enter PostgreSQL password for POSTGRES_PASSWORD: " POSTGRES_PASSWORD
   echo
 else
   POSTGRES_PASSWORD="${!PASSWORD_ENV_VAR}"
