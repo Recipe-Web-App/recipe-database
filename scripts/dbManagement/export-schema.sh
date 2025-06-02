@@ -9,7 +9,7 @@ print_separator() {
 }
 
 NAMESPACE="recipe-database"
-EXPORT_PATH="./data/schema.sql"
+EXPORT_PATH="./db/backups/schema/schema.sql"
 
 print_separator
 echo "📥 Loading environment variables..."
@@ -29,10 +29,10 @@ print_separator
 echo "📦 Exporting schema from PostgreSQL pod in namespace '$NAMESPACE'..."
 print_separator
 
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
 
 if [ -z "$POD_NAME" ]; then
-  echo "❌ No PostgreSQL pod found in namespace '$NAMESPACE' with label app=postgres"
+  echo "❌ No PostgreSQL pod found in namespace '$NAMESPACE' with label app=recipe-database"
   exit 1
 fi
 

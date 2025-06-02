@@ -9,7 +9,7 @@ print_separator() {
 }
 
 NAMESPACE="recipe-database"
-POD_LABEL="app=postgres"
+POD_LABEL="app=recipe-database"
 
 print_separator
 echo "📥 Loading environment variables..."

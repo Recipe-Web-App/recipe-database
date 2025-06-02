@@ -5,7 +5,7 @@ set -euo pipefail
 
 NAMESPACE="recipe-database"
 CONFIG_DIR="k8s"
-SECRET_NAME="postgres-secret"
+SECRET_NAME="recipe-database-secret"
 MOUNT_PATH="/mnt/recipe-database"
 LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 MOUNT_PORT=8787
@@ -90,7 +90,7 @@ print_separator
 
 kubectl wait --namespace="$NAMESPACE" \
   --for=condition=Ready pod \
-  --selector=app=postgres \
+  --selector=app=recipe-database \
   --timeout=90s
 
 print_separator
@@ -106,12 +106,12 @@ else
   echo "✅ Minikube mount already running on port ${MOUNT_PORT}."
 fi
 
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
 
 print_separator
 echo "📡 Access info:"
 echo "  Pod: $POD_NAME"
-echo "  Host: postgres.$NAMESPACE.svc.cluster.local"
+echo "  Host: recipe-database.$NAMESPACE.svc.cluster.local"
 echo "  Port: 5432"
 echo "  User: $DB_MAINT_USER"
 echo "  DB:   $POSTGRES_DB"
