@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS recipe_manager.recipes (
   servings NUMERIC(5, 2),
   preparation_time INT,
   cooking_time INT,
-  difficulty VARCHAR(50),
+  difficulty recipe_manager.DIFFICULTY_LEVEL_ENUM NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

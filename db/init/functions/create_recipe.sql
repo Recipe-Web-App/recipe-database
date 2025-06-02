@@ -41,6 +41,7 @@ RETURNING recipe_id INTO v_recipe_id;
 -- Insert ingredients into recipe_ingredients
 FOR v_ingredient IN
 SELECT *
+-- TODO(jsamuelsen): VALIDATE THE JSONB STRUCTURE
 FROM jsonb_to_recordset(p_ingredients) AS (
     ingredient_id BIGINT,
     quantity NUMERIC,
