@@ -10,7 +10,8 @@ spec:
       restartPolicy: Never
       containers:
         - name: db-load-schema
-          image: postgres:14
+          image: recipe-database:latest
+          imagePullPolicy: Never
           env:
             - name: POSTGRES_HOST
               valueFrom:
@@ -32,6 +33,16 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_PASSWORD
+            - name: RECIPE_SCRAPER_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: RECIPE_SCRAPER_USER
+            - name: RECIPE_SCRAPER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: RECIPE_SCRAPER_PASSWORD
           volumeMounts:
             - name: sql-volume
               mountPath: /sql

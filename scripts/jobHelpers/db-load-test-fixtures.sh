@@ -31,7 +31,7 @@ fi
 
 for f in "${fixtures[@]}"; do
   echo "⏳ Seeding $(basename "$f")..."
-  psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$f"
+  envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 done
 
 print_separator

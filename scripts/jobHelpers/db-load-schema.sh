@@ -30,7 +30,7 @@ execute_sql_files() {
 
   for f in "${files[@]}"; do
     echo "⏳ Executing $f"
-    psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$f"
+    envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
   done
 }
 
@@ -38,6 +38,7 @@ execute_sql_files "/sql/init/schema" "Initializing schema"
 execute_sql_files "/sql/init/functions" "Loading functions"
 execute_sql_files "/sql/init/triggers" "Creating triggers"
 execute_sql_files "/sql/init/views" "Creating views"
+execute_sql_files "/sql/init/users" "Creating users"
 
 print_separator
 echo "✅ Database initialization complete."

@@ -10,7 +10,8 @@ spec:
       restartPolicy: Never
       containers:
         - name: db-load-test-fixtures
-          image: postgres:14
+          image: recipe-database:latest
+          imagePullPolicy: Never
           env:
             - name: POSTGRES_HOST
               valueFrom:

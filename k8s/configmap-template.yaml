@@ -5,7 +5,10 @@ metadata:
   name: postgres-config
   namespace: recipe-db
 data:
-  POSTGRES_USER: "${POSTGRES_USER}"
-  POSTGRES_DB: "${POSTGRES_DB}"
+  # Database configuration
   POSTGRES_HOST: "${POSTGRES_HOST}"
+  POSTGRES_DB: "${POSTGRES_DB}"
   POSTGRES_SCHEMA: "${POSTGRES_SCHEMA}"
+  # Account Usernames
+  POSTGRES_USER: "${POSTGRES_USER}"
+  RECIPE_SCRAPER_USER: "${RECIPE_SCRAPER_USER}"
