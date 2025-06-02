@@ -8,7 +8,7 @@ print_separator() {
   printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
 }
 
-NAMESPACE="recipe-db"
+NAMESPACE="recipe-database"
 EXPORT_PATH="./data/schema.sql"
 
 print_separator

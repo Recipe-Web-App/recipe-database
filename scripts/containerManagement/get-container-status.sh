@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-NAMESPACE="recipe-db"
+NAMESPACE="recipe-database"
 DEPLOYMENT="postgres-deployment"
 SERVICE="postgres-service"
 JOB="db-load-schema-job"

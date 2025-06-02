@@ -32,13 +32,13 @@ mkdir -p "$BACKUP_DIR"
 echo "📁 Backup directory ensured at: $BACKUP_DIR"
 
 print_separator
-echo "🚀 Finding PostgreSQL pod in namespace recipe-db..."
+echo "🚀 Finding PostgreSQL pod in namespace recipe-database..."
 print_separator
 
-POD_NAME=$(kubectl get pods -n recipe-db -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n recipe-database -l app=postgres -o jsonpath="{.items[0].metadata.name}")
 
 if [ -z "$POD_NAME" ]; then
-  echo "❌ No PostgreSQL pod found in namespace recipe-db with label app=postgres"
+  echo "❌ No PostgreSQL pod found in namespace recipe-database with label app=postgres"
   exit 1
 fi
 
@@ -48,7 +48,7 @@ print_separator
 echo "📦 Creating backup from pod '$POD_NAME' into local file '$BACKUP_FILE'..."
 print_separator
 
-if kubectl exec -n recipe-db "$POD_NAME" -- \
+if kubectl exec -n recipe-database "$POD_NAME" -- \
   bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -n recipe_manager" > "$BACKUP_FILE"; then
   echo "✅ Backup completed successfully."
 else

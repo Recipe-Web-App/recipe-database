@@ -9,7 +9,7 @@ print_separator() {
 
 LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 JOB_NAME="db-load-test-fixtures-job"
-NAMESPACE="recipe-db"
+NAMESPACE="recipe-database"
 YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-load-test-fixtures-job.yaml"
 
 print_separator

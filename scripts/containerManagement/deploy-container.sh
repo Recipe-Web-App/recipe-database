@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-NAMESPACE="recipe-db"
+NAMESPACE="recipe-database"
 CONFIG_DIR="k8s"
 SECRET_NAME="postgres-secret"
 MOUNT_PATH="/mnt/recipe-database"

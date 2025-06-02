@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-NAMESPACE="recipe-db"
+NAMESPACE="recipe-database"
 DEPLOYMENT="postgres"
 
 print_separator() {
