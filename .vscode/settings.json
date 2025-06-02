@@ -2,7 +2,7 @@
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
 
-    // SQL formatting
+  // SQL formatting
   "sqltools.format": {
     "keywordCase": "upper",     // SELECT instead of select
     "identifierCase": "lower"   // table_name instead of TABLE_NAME
@@ -23,13 +23,12 @@
 
   // Files to ignore
   "files.exclude": {
-    "**/.DS_Store": true,
-    "**/__pycache__": true
+    "**/.DS_Store": true
   },
 
   // Enable formatting on save for SQL files
   "[sql]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "mtxr.sqltools"
+    "editor.defaultFormatter": "SQLFluff.sqlfluff"
   }
 }
