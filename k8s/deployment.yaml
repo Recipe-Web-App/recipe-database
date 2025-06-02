@@ -2,39 +2,50 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
-  namespace: recipe-db
+  name: recipe-database
+  namespace: recipe-database
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: recipe-database
   template:
     metadata:
       labels:
-        app: postgres
+        app: recipe-database
     spec:
       containers:
-        - name: postgres
-          image: postgres:15.4
+        - name: recipe-database
+          image: recipe-database:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 5432
           env:
             - name: POSTGRES_USER
               valueFrom:
                 configMapKeyRef:
-                  name: postgres-config
+                  name: recipe-database-config
                   key: POSTGRES_USER
-            - name: POSTGRES_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: postgres-config
-                  key: POSTGRES_DB
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret
+                  name: recipe-database-secret
                   key: POSTGRES_PASSWORD
+            - name: DB_MAINT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: recipe-database-config
+                  key: DB_MAINT_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: recipe-database-config
+                  key: POSTGRES_DB
+            - name: DB_MAINT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipe-database-secret
+                  key: DB_MAINT_PASSWORD
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgres-storage
@@ -48,4 +59,4 @@ spec:
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
-            claimName: postgres-pvc
+            claimName: recipe-database-pvc

@@ -1,5 +1,6 @@
 -- db/init/triggers/prevent_review_self.sql
-CREATE OR REPLACE FUNCTION recipe_manager.prevent_reviewing_own_recipe() RETURNS TRIGGER AS $$ BEGIN IF EXISTS (
+CREATE OR REPLACE FUNCTION recipe_manager.prevent_reviewing_own_recipe()
+RETURNS TRIGGER AS $$ BEGIN IF EXISTS (
     SELECT 1
     FROM recipe_manager.recipes
     WHERE recipe_id = NEW.recipe_id
@@ -10,4 +11,5 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 CREATE TRIGGER prevent_self_review BEFORE
-INSERT ON recipe_manager.reviews FOR EACH ROW EXECUTE FUNCTION recipe_manager.prevent_reviewing_own_recipe();
+INSERT ON recipe_manager.reviews FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.prevent_reviewing_own_recipe();

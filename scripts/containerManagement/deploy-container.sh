@@ -3,14 +3,16 @@
 
 set -euo pipefail
 
-NAMESPACE="recipe-db"
+NAMESPACE="recipe-database"
 CONFIG_DIR="k8s"
-SECRET_NAME="postgres-secret"
-PASSWORD_ENV_VAR="POSTGRES_PASSWORD"
+SECRET_NAME="recipe-database-secret"
 MOUNT_PATH="/mnt/recipe-database"
 LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 MOUNT_PORT=8787
 MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH} --port=${MOUNT_PORT}"
+IMAGE_NAME="recipe-database"
+IMAGE_TAG="latest"
+FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
 
 # Utility function for printing section separators
 print_separator() {
@@ -45,6 +47,13 @@ if [ -f .env ]; then
 fi
 
 print_separator
+echo "🐳 Building Docker image: ${FULL_IMAGE_NAME} (inside Minikube Docker daemon)"
+print_separator
+
+eval "$(minikube docker-env)"
+docker build -t "$FULL_IMAGE_NAME" .
+
+print_separator
 echo "⚙️ Creating/Updating ConfigMap from env..."
 print_separator
 
@@ -54,17 +63,8 @@ print_separator
 echo "🔐 Creating/updating Secret..."
 print_separator
 
-if [ -z "${!PASSWORD_ENV_VAR:-}" ]; then
-  read -r -s -p "Enter PostgreSQL password for POSTGRES_PASSWORD: " POSTGRES_PASSWORD
-  echo
-else
-  POSTGRES_PASSWORD="${!PASSWORD_ENV_VAR}"
-fi
-
 kubectl delete secret "$SECRET_NAME" -n "$NAMESPACE" --ignore-not-found
-kubectl create secret generic "$SECRET_NAME" \
-  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-  -n "$NAMESPACE"
+envsubst < "${CONFIG_DIR}/secret-template.yaml" | kubectl apply -f -
 
 print_separator
 echo "💾 Applying PersistentVolumeClaim..."
@@ -90,7 +90,7 @@ print_separator
 
 kubectl wait --namespace="$NAMESPACE" \
   --for=condition=Ready pod \
-  --selector=app=postgres \
+  --selector=app=recipe-database \
   --timeout=90s
 
 print_separator
@@ -106,13 +106,13 @@ else
   echo "✅ Minikube mount already running on port ${MOUNT_PORT}."
 fi
 
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
 
 print_separator
 echo "📡 Access info:"
 echo "  Pod: $POD_NAME"
-echo "  Host: postgres.$NAMESPACE.svc.cluster.local"
+echo "  Host: recipe-database.$NAMESPACE.svc.cluster.local"
 echo "  Port: 5432"
-echo "  User: $POSTGRES_USER"
+echo "  User: $DB_MAINT_USER"
 echo "  DB:   $POSTGRES_DB"
 print_separator

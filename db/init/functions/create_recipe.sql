@@ -1,15 +1,15 @@
 -- db/init/functions/create_recipe.sql
 CREATE OR REPLACE FUNCTION recipe_manager.create_recipe(
-    p_user_id BIGINT,
-    p_title VARCHAR,
-    p_description TEXT,
-    p_servings NUMERIC,
-    p_prep_time INT,
-    p_cook_time INT,
-    p_difficulty VARCHAR,
-    p_origin_url TEXT,
-    p_ingredients JSONB -- format: [{ingredient_id: int, quantity: numeric, unit: text, is_optional: bool}, ...]
-  ) RETURNS BIGINT LANGUAGE plpgsql AS $$
+  p_user_id BIGINT,
+  p_title VARCHAR,
+  p_description TEXT,
+  p_servings NUMERIC,
+  p_prep_time INT,
+  p_cook_time INT,
+  p_difficulty VARCHAR,
+  p_origin_url TEXT,
+  p_ingredients JSONB
+) RETURNS BIGINT LANGUAGE plpgsql AS $$
 DECLARE v_recipe_id BIGINT;
 v_ingredient RECORD;
 BEGIN -- Insert into recipes table
@@ -41,6 +41,7 @@ RETURNING recipe_id INTO v_recipe_id;
 -- Insert ingredients into recipe_ingredients
 FOR v_ingredient IN
 SELECT *
+-- TODO(jsamuelsen): VALIDATE THE JSONB STRUCTURE
 FROM jsonb_to_recordset(p_ingredients) AS (
     ingredient_id BIGINT,
     quantity NUMERIC,

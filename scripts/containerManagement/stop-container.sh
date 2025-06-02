@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-NAMESPACE="recipe-db"
-DEPLOYMENT="postgres"
+NAMESPACE="recipe-database"
+DEPLOYMENT="recipe-database"
 
 print_separator() {
   printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='

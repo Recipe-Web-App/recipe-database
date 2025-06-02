@@ -8,9 +8,8 @@ print_separator() {
   printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
 }
 
-NAMESPACE="recipe-db"
-POD_LABEL="app=postgres"
-LOCAL_PORT=15432
+NAMESPACE="recipe-database"
+POD_LABEL="app=recipe-database"
 
 print_separator
 echo "📥 Loading environment variables..."
@@ -26,60 +25,51 @@ else
   echo "ℹ️ No .env file found. Proceeding without loading environment variables."
 fi
 
-POSTGRES_USER=${POSTGRES_USER:-}
+DB_MAINT_USER=${DB_MAINT_USER:-}
 POSTGRES_DB=${POSTGRES_DB:-}
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+DB_MAINT_PASSWORD=${DB_MAINT_PASSWORD:-}
 POSTGRES_SCHEMA=${POSTGRES_SCHEMA:-public}
 
 print_separator
-if [ -z "$POSTGRES_USER" ]; then
-  read -rp "Enter DB user: " POSTGRES_USER
+if [ -z "$DB_MAINT_USER" ]; then
+  read -rp "Enter DB user: " DB_MAINT_USER
 fi
 
 if [ -z "$POSTGRES_DB" ]; then
   read -rp "Enter DB name: " POSTGRES_DB
 fi
 
-if [ -z "$POSTGRES_PASSWORD" ]; then
-  read -s -rp "Enter DB password: " POSTGRES_PASSWORD
+if [ -z "$DB_MAINT_PASSWORD" ]; then
+  read -s -rp "Enter DB password: " DB_MAINT_PASSWORD
   echo
 fi
 
 print_separator
-echo "🚀 Finding PostgreSQL pod in namespace $NAMESPACE..."
+echo "🚀 Finding a running PostgreSQL pod in namespace $NAMESPACE..."
 print_separator
 
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$POD_LABEL" -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$POD_LABEL" \
+    --field-selector=status.phase=Running \
+  -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
 
 if [ -z "$POD_NAME" ]; then
-  echo "❌ No PostgreSQL pod found in namespace $NAMESPACE with label $POD_LABEL"
+  echo "❌ No running PostgreSQL pod found in namespace $NAMESPACE with label $POD_LABEL"
+  echo "   (Tip: Check 'kubectl get pods -n $NAMESPACE' to see pod status.)"
   exit 1
 fi
 
 echo "✅ Found pod: $POD_NAME"
 
 print_separator
-echo "🔌 Port-forwarding pod $POD_NAME to localhost:$LOCAL_PORT ..."
-kubectl port-forward -n "$NAMESPACE" pod/"$POD_NAME" $LOCAL_PORT:5432 &
-PF_PID=$!
-
-sleep 3 # give port-forward time to start
-
-print_separator
 echo "📂 Defaulting to schema: $POSTGRES_SCHEMA"
-echo "🔐 Starting psql client..."
+echo "🔐 Starting psql client inside pod..."
 print_separator
 
-PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
-  PGPASSWORD="$POSTGRES_PASSWORD" \
-  psql -h localhost -p "$LOCAL_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+kubectl exec -it -n "$NAMESPACE" "$POD_NAME" -- \
+  env PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
+  PGPASSWORD="$DB_MAINT_PASSWORD" \
+  psql -U "$DB_MAINT_USER" -d "$POSTGRES_DB"
 
 print_separator
-echo "🛑 Closing port-forward (PID $PF_PID)..."
-if kill -0 "$PF_PID" 2>/dev/null; then
-  kill "$PF_PID"
-  echo "✅ Port-forward process killed."
-else
-  echo "ℹ️ Port-forward process already stopped."
-fi
+echo "✅ psql session ended."
 print_separator

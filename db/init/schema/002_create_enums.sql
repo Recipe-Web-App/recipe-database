@@ -22,17 +22,26 @@ EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for meal types
-DO $$ BEGIN CREATE TYPE recipe_manager.meal_type_enum AS ENUM ('breakfast', 'lunch', 'dinner', 'snack');
+DO $$ BEGIN CREATE TYPE recipe_manager.meal_type_enum
+  AS ENUM ('breakfast', 'lunch', 'dinner', 'snack', 'dessert');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for recipe revision categories
-DO $$ BEGIN CREATE TYPE recipe_manager.revision_category_enum as ENUM ('ingredient', 'step');
+DO $$ BEGIN CREATE TYPE recipe_manager.revision_category_enum
+   as ENUM ('ingredient', 'step');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for recipe revision types
-DO $$ BEGIN CREATE TYPE recipe_manager.revision_type_enum AS ENUM ('ADD', 'UPDATE', 'DELETE');
+DO $$ BEGIN CREATE TYPE recipe_manager.revision_type_enum
+   AS ENUM ('ADD', 'UPDATE', 'DELETE');
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+-- Enum for recipe difficulty levels
+DO $$ BEGIN CREATE TYPE recipe_manager.difficulty_level_enum
+   AS ENUM ('beginner', 'easy', 'medium', 'hard', 'expert');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;

@@ -16,6 +16,7 @@ echo "POSTGRES_USER: $POSTGRES_USER"
 execute_sql_files() {
   local dir=$1
   local label=$2
+  local status=0
 
   print_separator
   echo "🔧 $label..."
@@ -25,19 +26,28 @@ execute_sql_files() {
 
   if [ ${#files[@]} -eq 0 ]; then
     echo "ℹ️ No SQL files found in $dir"
-    return
+    return 0
   fi
 
   for f in "${files[@]}"; do
     echo "⏳ Executing $f"
-    psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$f"
+    # Run the pipeline and capture the exit status of psql
+    envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+    rc=${PIPESTATUS[1]:-${PIPESTATUS[0]}}
+    if [ "$rc" -ne 0 ]; then
+      echo "❌ Error executing $f"
+      status=$rc
+    fi
   done
+
+  return "$status"
 }
 
 execute_sql_files "/sql/init/schema" "Initializing schema"
 execute_sql_files "/sql/init/functions" "Loading functions"
 execute_sql_files "/sql/init/triggers" "Creating triggers"
 execute_sql_files "/sql/init/views" "Creating views"
+execute_sql_files "/sql/init/users" "Creating users"
 
 print_separator
 echo "✅ Database initialization complete."

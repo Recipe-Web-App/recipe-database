@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-export PGPASSWORD="$POSTGRES_PASSWORD"
+export PGPASSWORD="$DB_MAINT_PASSWORD"
 
 FIXTURES_DIR="sql/fixtures"
 
@@ -13,7 +13,7 @@ print_separator() {
 
 echo "POSTGRES_HOST: $POSTGRES_HOST"
 echo "POSTGRES_DB:   $POSTGRES_DB"
-echo "POSTGRES_USER: $POSTGRES_USER"
+echo "DB_MAINT_USER: $DB_MAINT_USER"
 
 print_separator
 echo "📦 Seeding test fixtures from $FIXTURES_DIR"
@@ -31,7 +31,7 @@ fi
 
 for f in "${fixtures[@]}"; do
   echo "⏳ Seeding $(basename "$f")..."
-  psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$f"
+  envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$DB_MAINT_USER" -d "$POSTGRES_DB"
 done
 
 print_separator
