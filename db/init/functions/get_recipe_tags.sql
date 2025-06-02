@@ -1,5 +1,7 @@
 -- db/init/functions/get_recipe_tags.sql
-CREATE OR REPLACE FUNCTION recipe_manager.get_recipe_tags(rid BIGINT) RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION recipe_manager.get_recipe_tags(
+  rid BIGINT
+) RETURNS TEXT AS $$
 DECLARE tags TEXT;
 BEGIN
 SELECT string_agg(t.name, ', ') INTO tags
