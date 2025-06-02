@@ -45,13 +45,16 @@ if [ -z "$DB_MAINT_PASSWORD" ]; then
 fi
 
 print_separator
-echo "🚀 Finding PostgreSQL pod in namespace $NAMESPACE..."
+echo "🚀 Finding a running PostgreSQL pod in namespace $NAMESPACE..."
 print_separator
 
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$POD_LABEL" -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$POD_LABEL" \
+    --field-selector=status.phase=Running \
+  -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
 
 if [ -z "$POD_NAME" ]; then
-  echo "❌ No PostgreSQL pod found in namespace $NAMESPACE with label $POD_LABEL"
+  echo "❌ No running PostgreSQL pod found in namespace $NAMESPACE with label $POD_LABEL"
+  echo "   (Tip: Check 'kubectl get pods -n $NAMESPACE' to see pod status.)"
   exit 1
 fi
 
