@@ -10,7 +10,6 @@ print_separator() {
 
 NAMESPACE="recipe-db"
 POD_LABEL="app=postgres"
-LOCAL_PORT=15432
 
 print_separator
 echo "📥 Loading environment variables..."
@@ -59,27 +58,15 @@ fi
 echo "✅ Found pod: $POD_NAME"
 
 print_separator
-echo "🔌 Port-forwarding pod $POD_NAME to localhost:$LOCAL_PORT ..."
-kubectl port-forward -n "$NAMESPACE" pod/"$POD_NAME" $LOCAL_PORT:5432 &
-PF_PID=$!
-
-sleep 3 # give port-forward time to start
-
-print_separator
 echo "📂 Defaulting to schema: $POSTGRES_SCHEMA"
-echo "🔐 Starting psql client..."
+echo "🔐 Starting psql client inside pod..."
 print_separator
 
-PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
+kubectl exec -it -n "$NAMESPACE" "$POD_NAME" -- \
+  env PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
   PGPASSWORD="$POSTGRES_PASSWORD" \
-  psql -h localhost -p "$LOCAL_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
 print_separator
-echo "🛑 Closing port-forward (PID $PF_PID)..."
-if kill -0 "$PF_PID" 2>/dev/null; then
-  kill "$PF_PID"
-  echo "✅ Port-forward process killed."
-else
-  echo "ℹ️ Port-forward process already stopped."
-fi
+echo "✅ psql session ended."
 print_separator

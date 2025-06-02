@@ -7,6 +7,9 @@ NAMESPACE="recipe-db"
 MOUNT_PATH="/mnt/recipe-database"
 LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH}"
+IMAGE_NAME="recipe-database"
+IMAGE_TAG="latest"
+FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
 
 # Utility function for printing section separators
 print_separator() {
@@ -33,7 +36,7 @@ print_separator
 
 kubectl delete -f k8s/configmap-template.yaml -n "$NAMESPACE" --ignore-not-found
 kubectl delete -f k8s/deployment.yaml -n "$NAMESPACE" --ignore-not-found
-kubectl delete -f k8s/secret.yaml -n "$NAMESPACE" --ignore-not-found
+kubectl delete -f k8s/secret-template.yaml -n "$NAMESPACE" --ignore-not-found
 kubectl delete -f k8s/service.yaml -n "$NAMESPACE" --ignore-not-found
 
 print_separator
@@ -70,6 +73,13 @@ if [[ "$del_pvc" =~ ^[Yy]$ ]]; then
 else
   echo "💾 PVC retained."
 fi
+
+print_separator
+echo "🐳 Removing Docker image '${FULL_IMAGE_NAME}' from Minikube..."
+print_separator
+
+eval "$(minikube docker-env)"
+docker rmi -f "$FULL_IMAGE_NAME" || echo "Image not found or already removed."
 
 print_separator
 read -r -p "🛑 Do you want to stop (shut down) Minikube now? (y/N): " stop_mk
