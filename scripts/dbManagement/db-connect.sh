@@ -25,22 +25,22 @@ else
   echo "ℹ️ No .env file found. Proceeding without loading environment variables."
 fi
 
-POSTGRES_USER=${POSTGRES_USER:-}
+DB_MAINT_USER=${DB_MAINT_USER:-}
 POSTGRES_DB=${POSTGRES_DB:-}
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+DB_MAINT_PASSWORD=${DB_MAINT_PASSWORD:-}
 POSTGRES_SCHEMA=${POSTGRES_SCHEMA:-public}
 
 print_separator
-if [ -z "$POSTGRES_USER" ]; then
-  read -rp "Enter DB user: " POSTGRES_USER
+if [ -z "$DB_MAINT_USER" ]; then
+  read -rp "Enter DB user: " DB_MAINT_USER
 fi
 
 if [ -z "$POSTGRES_DB" ]; then
   read -rp "Enter DB name: " POSTGRES_DB
 fi
 
-if [ -z "$POSTGRES_PASSWORD" ]; then
-  read -s -rp "Enter DB password: " POSTGRES_PASSWORD
+if [ -z "$DB_MAINT_PASSWORD" ]; then
+  read -s -rp "Enter DB password: " DB_MAINT_PASSWORD
   echo
 fi
 
@@ -64,8 +64,8 @@ print_separator
 
 kubectl exec -it -n "$NAMESPACE" "$POD_NAME" -- \
   env PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
-  PGPASSWORD="$POSTGRES_PASSWORD" \
-  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+  PGPASSWORD="$DB_MAINT_PASSWORD" \
+  psql -U "$DB_MAINT_USER" -d "$POSTGRES_DB"
 
 print_separator
 echo "✅ psql session ended."

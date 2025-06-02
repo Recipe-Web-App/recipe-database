@@ -16,8 +16,8 @@
       "server": "localhost",
       "port": 5432,
       "database": "recipe_platform",
-      "username": "${env:POSTGRES_USER}",
-      "password": "${env:POSTGRES_PASSWORD}"
+      "username": "${env:DB_MAINT_USER}",
+      "password": "${env:DB_MAINT_PASSWORD}"
     }
   ],
 

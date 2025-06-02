@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-export PGPASSWORD="$POSTGRES_PASSWORD"
+export PGPASSWORD="$DB_MAINT_PASSWORD"
 
 print_separator() {
   printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
@@ -11,7 +11,7 @@ print_separator() {
 
 echo "POSTGRES_HOST: $POSTGRES_HOST"
 echo "POSTGRES_DB:   $POSTGRES_DB"
-echo "POSTGRES_USER: $POSTGRES_USER"
+echo "DB_MAINT_USER: $DB_MAINT_USER"
 
 execute_sql_files() {
   local dir=$1
@@ -30,7 +30,7 @@ execute_sql_files() {
 
   for f in "${files[@]}"; do
     echo "⏳ Executing $f"
-    envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+    envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$DB_MAINT_USER" -d "$POSTGRES_DB"
   done
 }
 

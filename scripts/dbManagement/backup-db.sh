@@ -49,7 +49,7 @@ echo "📦 Creating backup from pod '$POD_NAME' into local file '$BACKUP_FILE'..
 print_separator
 
 if kubectl exec -n recipe-db "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$POSTGRES_PASSWORD' pg_dump -U '$POSTGRES_USER' -d '$POSTGRES_DB' -n recipe_manager" > "$BACKUP_FILE"; then
+  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -n recipe_manager" > "$BACKUP_FILE"; then
   echo "✅ Backup completed successfully."
 else
   echo "❌ Backup failed."

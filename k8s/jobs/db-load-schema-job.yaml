@@ -23,16 +23,16 @@ spec:
                 configMapKeyRef:
                   name: postgres-config
                   key: POSTGRES_DB
-            - name: POSTGRES_USER
+            - name: DB_MAINT_USER
               valueFrom:
                 configMapKeyRef:
                   name: postgres-config
-                  key: POSTGRES_USER
-            - name: POSTGRES_PASSWORD
+                  key: DB_MAINT_USER
+            - name: DB_MAINT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
-                  key: POSTGRES_PASSWORD
+                  key: DB_MAINT_PASSWORD
             - name: RECIPE_SCRAPER_USER
               valueFrom:
                 configMapKeyRef:

@@ -113,6 +113,6 @@ echo "📡 Access info:"
 echo "  Pod: $POD_NAME"
 echo "  Host: postgres.$NAMESPACE.svc.cluster.local"
 echo "  Port: 5432"
-echo "  User: $POSTGRES_USER"
+echo "  User: $DB_MAINT_USER"
 echo "  DB:   $POSTGRES_DB"
 print_separator
