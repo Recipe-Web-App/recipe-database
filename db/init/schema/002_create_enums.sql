@@ -16,7 +16,8 @@ DO $$ BEGIN CREATE TYPE recipe_manager.ingredient_unit_enum AS ENUM (
   'pinch',
   'can',
   'bottle',
-  'packet'
+  'packet',
+  'unit'
 );
 EXCEPTION
 WHEN duplicate_object THEN null;
