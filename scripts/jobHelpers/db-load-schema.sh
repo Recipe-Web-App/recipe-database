@@ -5,10 +5,17 @@ set -euo pipefail
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
 
+# Fixes bug where first separator line does not fill the terminal width
+COLUMNS=$(tput cols 2>/dev/null || echo 80)
+
+# Utility function for printing section separators
 print_separator() {
-  printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
+  local char="${1:-=}"
+  local width="${COLUMNS:-80}"
+  printf '%*s\n' "$width" '' | tr ' ' "$char"
 }
 
+print_separator "="
 echo "POSTGRES_HOST: $POSTGRES_HOST"
 echo "POSTGRES_DB:   $POSTGRES_DB"
 echo "POSTGRES_USER: $POSTGRES_USER"
@@ -18,7 +25,7 @@ execute_sql_files() {
   local label=$2
   local status=0
 
-  print_separator
+  print_separator "="
   echo "🔧 $label..."
   shopt -s nullglob
   local files=("$dir"/*.sql)
@@ -38,6 +45,7 @@ execute_sql_files() {
       echo "❌ Error executing $f"
       status=$rc
     fi
+    print_separator "-"
   done
 
   return "$status"
@@ -49,6 +57,6 @@ execute_sql_files "/sql/init/triggers" "Creating triggers"
 execute_sql_files "/sql/init/views" "Creating views"
 execute_sql_files "/sql/init/users" "Creating users"
 
-print_separator
+print_separator "="
 echo "✅ Database initialization complete."
-print_separator
+print_separator "="
