@@ -3,17 +3,22 @@
 
 set -euo pipefail
 
+# Fixes bug where first separator line does not fill the terminal width
+COLUMNS=$(tput cols 2>/dev/null || echo 80)
+
 # Utility function for printing section separators
 print_separator() {
-  printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
+  local char="${1:-=}"
+  local width="${COLUMNS:-80}"
+  printf '%*s\n' "$width" '' | tr ' ' "$char"
 }
 
 NAMESPACE="recipe-database"
 POD_LABEL="app=recipe-database"
 
-print_separator
+print_separator "="
 echo "📥 Loading environment variables..."
-print_separator
+print_separator "-"
 
 if [ -f .env ]; then
   # shellcheck disable=SC1091
@@ -30,23 +35,9 @@ POSTGRES_DB=${POSTGRES_DB:-}
 DB_MAINT_PASSWORD=${DB_MAINT_PASSWORD:-}
 POSTGRES_SCHEMA=${POSTGRES_SCHEMA:-public}
 
-print_separator
-if [ -z "$DB_MAINT_USER" ]; then
-  read -rp "Enter DB user: " DB_MAINT_USER
-fi
-
-if [ -z "$POSTGRES_DB" ]; then
-  read -rp "Enter DB name: " POSTGRES_DB
-fi
-
-if [ -z "$DB_MAINT_PASSWORD" ]; then
-  read -s -rp "Enter DB password: " DB_MAINT_PASSWORD
-  echo
-fi
-
-print_separator
+print_separator "="
 echo "🚀 Finding a running PostgreSQL pod in namespace $NAMESPACE..."
-print_separator
+print_separator "-"
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$POD_LABEL" \
     --field-selector=status.phase=Running \
@@ -60,16 +51,16 @@ fi
 
 echo "✅ Found pod: $POD_NAME"
 
-print_separator
+print_separator "="
 echo "📂 Defaulting to schema: $POSTGRES_SCHEMA"
 echo "🔐 Starting psql client inside pod..."
-print_separator
+print_separator "-"
 
 kubectl exec -it -n "$NAMESPACE" "$POD_NAME" -- \
   env PGOPTIONS="--search_path=$POSTGRES_SCHEMA" \
   PGPASSWORD="$DB_MAINT_PASSWORD" \
   psql -U "$DB_MAINT_USER" -d "$POSTGRES_DB"
 
-print_separator
+print_separator "="
 echo "✅ psql session ended."
-print_separator
+print_separator "="

@@ -3,17 +3,22 @@
 
 set -euo pipefail
 
+# Fixes bug where first separator line does not fill the terminal width
+COLUMNS=$(tput cols 2>/dev/null || echo 80)
+
 # Utility function for printing section separators
 print_separator() {
-  printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
+  local char="${1:-=}"
+  local width="${COLUMNS:-80}"
+  printf '%*s\n' "$width" '' | tr ' ' "$char"
 }
 
 NAMESPACE="recipe-database"
 EXPORT_PATH="./db/backups/schema/schema.sql"
 
-print_separator
+print_separator "="
 echo "📥 Loading environment variables..."
-print_separator
+print_separator "-"
 
 if [ -f .env ]; then
   # shellcheck disable=SC1091
@@ -25,9 +30,9 @@ else
   echo "ℹ️ No .env file found. Proceeding without loading environment variables."
 fi
 
-print_separator
+print_separator "="
 echo "📦 Exporting schema from PostgreSQL pod in namespace '$NAMESPACE'..."
-print_separator
+print_separator "-"
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
 
@@ -46,4 +51,4 @@ else
   exit 1
 fi
 
-print_separator
+print_separator "="

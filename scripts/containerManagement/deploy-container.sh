@@ -14,44 +14,103 @@ IMAGE_NAME="recipe-database"
 IMAGE_TAG="latest"
 FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
 
+# Fixes bug where first separator line does not fill the terminal width
+COLUMNS=$(tput cols 2>/dev/null || echo 80)
+
 # Utility function for printing section separators
 print_separator() {
-  printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
+  local char="${1:-=}"
+  local width="${COLUMNS:-80}"
+  printf '%*s\n' "$width" '' | tr ' ' "$char"
 }
 
-print_separator
-echo "🔄 Checking if Minikube is running..."
-print_separator
+print_separator "="
+echo "🔧 Setting up Minikube environment..."
+print_separator "-"
+env_status=true
+if ! command -v minikube >/dev/null 2>&1; then
+  echo "❌ Minikube is not installed. Please install it first."
+  env_status=false
+else
+  echo "✅ Minikube is installed."
+fi
+
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "❌ kubectl is not installed. Please install it first."
+  env_status=false
+else
+  echo "✅ kubectl is installed."
+fi
+if ! command -v docker >/dev/null 2>&1; then
+  echo "❌ Docker is not installed. Please install it first."
+  env_status=false
+else
+  echo "✅ Docker is installed."
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "❌ jq is not installed. Please install it first."
+  env_status
+else
+  echo "✅ jq is installed."
+fi
+if ! $env_status; then
+  echo "Please resolve the above issues before proceeding."
+  exit 1
+fi
 
 if ! minikube status >/dev/null 2>&1; then
+  print_separator "-"
   echo "🚀 Starting Minikube..."
   minikube start
+
+  if ! minikube addons list | grep -q 'ingress *enabled'; then
+    echo "🔌 Enabling Minikube ingress addon..."
+    minikube addons enable ingress
+    echo "✅ Minikube started."
+  fi
 else
   echo "✅ Minikube is already running."
 fi
 
-print_separator
+print_separator "="
 echo "📂 Ensuring namespace '${NAMESPACE}' exists..."
-print_separator
+print_separator "-"
 
-kubectl get namespace "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$NAMESPACE"
+if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+  echo "✅ '$NAMESPACE' namespace already exists."
+else
+  kubectl create namespace "$NAMESPACE"
+  echo "✅ '$NAMESPACE' namespace created."
+fi
 
-print_separator
+
+print_separator "="
 echo "🔧 Loading environment variables from .env file (if present)..."
-print_separator
+print_separator "-"
 
 if [ -f .env ]; then
   set -o allexport
+  # Capture env before
+  BEFORE_ENV=$(mktemp)
+  AFTER_ENV=$(mktemp)
+  env | cut -d= -f1 | sort > "$BEFORE_ENV"
   source .env
+  # Capture env after
+  env | cut -d= -f1 | sort > "$AFTER_ENV"
+  # Show newly loaded/changed variables
+  echo "✅ Loaded variables from .env:"
+  comm -13 "$BEFORE_ENV" "$AFTER_ENV"
+  rm -f "$BEFORE_ENV" "$AFTER_ENV"
   set +o allexport
 fi
 
-print_separator
+print_separator "="
 echo "🐳 Building Docker image: ${FULL_IMAGE_NAME} (inside Minikube Docker daemon)"
-print_separator
+print_separator '-'
 
 eval "$(minikube docker-env)"
 docker build -t "$FULL_IMAGE_NAME" .
+echo "✅ Docker image '${FULL_IMAGE_NAME}' built successfully."
 
 print_separator
 echo "⚙️ Creating/Updating ConfigMap from env..."
@@ -84,18 +143,14 @@ print_separator
 
 kubectl apply -f "${CONFIG_DIR}/service.yaml"
 
-print_separator
-echo "⏳ Waiting for PostgreSQL pod to be ready..."
-print_separator
-
 kubectl wait --namespace="$NAMESPACE" \
   --for=condition=Ready pod \
   --selector=app=recipe-database \
   --timeout=90s
 
-print_separator
+print_separator "="
 echo "✅ PostgreSQL is up and running in namespace '$NAMESPACE'."
-print_separator
+print_separator "-"
 
 if ! pgrep -f "$MOUNT_CMD" > /dev/null; then
   echo "🔗 Starting Minikube mount on port ${MOUNT_PORT}..."
@@ -108,11 +163,11 @@ fi
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
 
-print_separator
+print_separator "="
 echo "📡 Access info:"
 echo "  Pod: $POD_NAME"
 echo "  Host: recipe-database.$NAMESPACE.svc.cluster.local"
 echo "  Port: 5432"
 echo "  User: $DB_MAINT_USER"
 echo "  DB:   $POSTGRES_DB"
-print_separator
+print_separator "="
