@@ -4,6 +4,8 @@ kind: ConfigMap
 metadata:
   name: recipe-database-config
   namespace: recipe-database
+  labels:
+    app: recipe-database
 data:
   # Database configuration
   POSTGRES_HOST: "${POSTGRES_HOST}"

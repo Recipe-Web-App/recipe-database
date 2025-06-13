@@ -4,6 +4,8 @@ kind: Service
 metadata:
   name: recipe-database-service
   namespace: recipe-database
+  labels:
+    app: recipe-database
 spec:
   selector:
     app: recipe-database

@@ -4,8 +4,13 @@ kind: Job
 metadata:
   name: db-load-test-fixtures-job
   namespace: recipe-database
+  labels:
+    app: recipe-database
 spec:
   template:
+    metadata:
+      labels:
+        app: recipe-database
     spec:
       restartPolicy: Never
       containers:
