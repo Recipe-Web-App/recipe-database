@@ -131,6 +131,9 @@ print_separator
 
 kubectl apply -f "${CONFIG_DIR}/pvc.yaml"
 
+kubectl get pv -o json | jq -r '.items[] | select(.spec.claimRef.namespace=="recipe-database") | .metadata.name' | \
+  xargs -I{} kubectl label pv {} app=recipe-database --overwrite
+
 print_separator
 echo "📦 Deploying PostgreSQL container..."
 print_separator

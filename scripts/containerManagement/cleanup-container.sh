@@ -74,6 +74,7 @@ print_separator "-"
 
 if [[ "$del_pvc" =~ ^[Yy]$ ]]; then
   kubectl delete -f k8s/pvc.yaml -n "$NAMESPACE" --ignore-not-found
+  kubectl delete pv -l app=recipe-database
   echo "🧨 PVC deleted."
 else
   echo "💾 PVC retained."
