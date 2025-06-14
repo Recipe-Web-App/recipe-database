@@ -8,9 +8,6 @@ metadata:
     app: recipe-database
 spec:
   template:
-    metadata:
-      labels:
-        app: recipe-database
     spec:
       restartPolicy: Never
       containers:
