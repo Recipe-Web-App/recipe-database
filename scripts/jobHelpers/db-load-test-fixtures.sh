@@ -5,7 +5,7 @@ set -euo pipefail
 
 export PGPASSWORD="$DB_MAINT_PASSWORD"
 
-FIXTURES_DIR="sql/fixtures"
+FIXTURES_DIR="/app/sql/fixtures"
 
 print_separator() {
   printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='

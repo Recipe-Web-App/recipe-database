@@ -47,9 +47,9 @@ spec:
                   key: DB_MAINT_PASSWORD
           volumeMounts:
             - name: sql-volume
-              mountPath: /sql
+              mountPath: /app/sql
             - name: scripts-volume
-              mountPath: /scripts
+              mountPath: /app/scripts
           command: ["bash", "-c", "/scripts/jobHelpers/db-load-test-fixtures.sh"]
       volumes:
         - name: sql-volume

@@ -51,11 +51,11 @@ execute_sql_files() {
   return "$status"
 }
 
-execute_sql_files "/sql/init/schema" "Initializing schema"
-execute_sql_files "/sql/init/functions" "Loading functions"
-execute_sql_files "/sql/init/triggers" "Creating triggers"
-execute_sql_files "/sql/init/views" "Creating views"
-execute_sql_files "/sql/init/users" "Creating users"
+execute_sql_files "/app/sql/init/schema" "Initializing schema"
+execute_sql_files "/app/sql/init/functions" "Loading functions"
+execute_sql_files "/app/sql/init/triggers" "Creating triggers"
+execute_sql_files "/app/sql/init/views" "Creating views"
+execute_sql_files "/app/sql/init/users" "Creating users"
 
 print_separator "="
 echo "✅ Database initialization complete."

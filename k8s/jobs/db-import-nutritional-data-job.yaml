@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: db-load-schema-job
+  name: db-import-nutritional-data-job
   namespace: recipe-database
   labels:
     app: recipe-database
@@ -11,7 +11,7 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-        - name: db-load-schema
+        - name: db-import-nutritional-data
           image: recipe-database:latest
           imagePullPolicy: Never
           env:
@@ -25,16 +25,11 @@ spec:
                 configMapKeyRef:
                   name: recipe-database-config
                   key: POSTGRES_DB
-            - name: POSTGRES_USER
+            - name: POSTGRES_SCHEMA
               valueFrom:
                 configMapKeyRef:
                   name: recipe-database-config
-                  key: POSTGRES_USER
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: recipe-database-secret
-                  key: POSTGRES_PASSWORD
+                  key: POSTGRES_SCHEMA
             - name: DB_MAINT_USER
               valueFrom:
                 configMapKeyRef:
@@ -45,26 +40,24 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: DB_MAINT_PASSWORD
-            - name: RECIPE_SCRAPER_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: recipe-database-config
-                  key: RECIPE_SCRAPER_USER
-            - name: RECIPE_SCRAPER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: recipe-database-secret
-                  key: RECIPE_SCRAPER_PASSWORD
+            - name: IMPORT_DATA_DIR
+              value: "/app/data"
           volumeMounts:
-            - name: sql-volume
-              mountPath: /app/sql
+            - name: data-volume
+              mountPath: /app/data
+            - name: python-volume
+              mountPath: /app/python
             - name: scripts-volume
-              mountPath: /scripts
-          command: ["bash", "-c", "/scripts/jobHelpers/db-load-schema.sh"]
+              mountPath: /app/scripts
+          command: ["bash", "-c", "/app/scripts/jobHelpers/db-import-nutritional-data.sh"]
       volumes:
-        - name: sql-volume
+        - name: data-volume
           hostPath:
-            path: /mnt/recipe-database/db
+            path: /mnt/recipe-database/db/data/imports
+            type: Directory
+        - name: python-volume
+          hostPath:
+            path: /mnt/recipe-database/python
             type: Directory
         - name: scripts-volume
           hostPath:
