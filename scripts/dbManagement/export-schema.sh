@@ -14,7 +14,7 @@ print_separator() {
 }
 
 NAMESPACE="recipe-database"
-EXPORT_PATH="./db/backups/schema/schema.sql"
+EXPORT_PATH="./db/data/exports/schema.sql"
 
 print_separator "="
 echo "📥 Loading environment variables..."

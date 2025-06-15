@@ -1,6 +1,13 @@
 *.env*
 !.env.example
 
-db/backups/*
-!db/backups/.gitkeep
-data/*
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+db/data/*/*
+!db/data/*/.gitkeep
