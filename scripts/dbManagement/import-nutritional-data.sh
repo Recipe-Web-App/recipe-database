@@ -203,7 +203,7 @@ cleanup() {
     print_separator "-"
     echo "✅ Cleanup completed"
   else
-    echo "ℹ️ Keeping downloaded files (KEEP_FILES=true)"
+    echo "ℹ️  Keeping downloaded files (KEEP_FILES=true)"
   fi
 }
 
@@ -220,7 +220,7 @@ main() {
   if [[ ! -f "$COMPRESSED_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
     download_csv
   else
-    echo "ℹ️ Compressed file already exists: $COMPRESSED_FILE"
+    echo "ℹ️  Compressed file already exists: $COMPRESSED_FILE"
     echo "    Use FORCE_DOWNLOAD=true to force re-download"
   fi
   
@@ -228,7 +228,7 @@ main() {
   if [[ ! -f "$EXTRACTED_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
     extract_csv
   else
-    echo "ℹ️ Extracted file already exists: $EXTRACTED_FILE"
+    echo "ℹ️  Extracted file already exists: $EXTRACTED_FILE"
     echo "    Use FORCE_DOWNLOAD=true to force re-extraction"
   fi
   

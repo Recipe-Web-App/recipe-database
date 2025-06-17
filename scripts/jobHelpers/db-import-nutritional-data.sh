@@ -31,6 +31,7 @@ install_dependencies() {
   print_separator "-"
   
   local requirements_file="/app/python/requirements.txt"
+  local venv_dir="/tmp/venv"
   
   if [[ ! -f "$requirements_file" ]]; then
     echo "❌ Error: Requirements file not found: $requirements_file"
@@ -38,8 +39,20 @@ install_dependencies() {
     exit 1
   fi
   
+  echo "Creating virtual environment at: $venv_dir"
+  if python3 -m venv "$venv_dir"; then
+    echo ""
+    echo "✅ Virtual environment created successfully"
+    print_separator "-"
+  else
+    echo "❌ Failed to create virtual environment"
+    print_separator "="
+    exit 1
+  fi
+  
   echo "Installing from: $requirements_file"
-  if pip3 install --no-cache-dir --break-system-packages -r "$requirements_file"; then
+  if "$venv_dir/bin/pip" install --no-cache-dir -r "$requirements_file"; then
+    echo ""
     echo "✅ Python dependencies installed successfully"
   else
     echo "❌ Failed to install Python dependencies"
@@ -47,7 +60,9 @@ install_dependencies() {
     exit 1
   fi
   
-  print_separator "-"
+  # Export the virtual environment paths for the Python script
+  export PATH="$venv_dir/bin:$PATH"
+  export VIRTUAL_ENV="$venv_dir"
 }
 
 # Function to verify data directory and CSV file exist
@@ -74,13 +89,9 @@ verify_data() {
   
   # Get file information
   local file_size=$(du -h "$CSV_FILE" | cut -f1)
-  local file_lines=$(wc -l < "$CSV_FILE" 2>/dev/null || echo "unknown")
   
   echo "✅ CSV file found: $CSV_FILE"
-  echo "   File size: $file_size"
-  echo "   Lines: $file_lines"
-  
-  print_separator "-"
+  echo "    File size: $file_size"
 }
 
 # Function to run the Python import script
@@ -131,8 +142,8 @@ main() {
   
   print_separator "="
   echo "🎉 OpenFoodFacts import job completed!"
-  echo "Total time: ${duration}s"
-  echo "Finished at: $(date)"
+  echo "    Total time: ${duration}s"
+  echo "    Finished at: $(date)"
   print_separator "="
 }
 
