@@ -1,8 +1,5 @@
 # Data processing
 pandas>=2.0.0
 
-# Database connectivity (will be needed later)
+# Database connectivity
 psycopg2-binary>=2.9.0
-
-# Environment variables (will be needed later)
-python-dotenv>=1.0.0
