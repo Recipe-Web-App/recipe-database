@@ -13,16 +13,25 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Set backup directories early
-BACKUP_DIR="./db/data/backups"
-EXPORT_DIR="./db/data/exports"
-
 # Utility function for printing section separators
 print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
 }
+
+LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+JOB_NAME="db-restore-nutritional-data-job"
+NAMESPACE="recipe-database"
+YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-restore-nutritional-data-job.yaml"
+
+# Set backup directories
+BACKUP_DIR="${LOCAL_PATH}/db/data/backups"
+EXPORT_DIR="${LOCAL_PATH}/db/data/exports"
+
+# Default options
+BACKUP_DATE=""
+RESTORE_OPTIONS=""
 
 # Function to get latest backup date
 get_latest_backup() {
@@ -42,7 +51,6 @@ show_usage() {
   echo "Options:"
   echo "  -s, --schema-only    Restore only table structure"
   echo "  -d, --data-only      Restore only data (table must exist)"
-  echo "  -f, --force          Skip confirmation prompts"
   echo "  -t, --truncate       Truncate table before restoring data"
   echo "  -h, --help           Show this help message"
   echo ""
@@ -66,43 +74,24 @@ show_usage() {
 }
 
 print_separator "="
-echo -e "${CYAN}📥 Loading environment variables...${NC}"
+echo -e "${CYAN}🥗 Nutritional Data Restore via Kubernetes Job${NC}"
 print_separator "-"
-
-# Load environment variables if .env exists
-if [ -f .env ]; then
-  # shellcheck disable=SC1091
-  set -o allexport
-  source .env
-  set +o allexport
-  echo -e "${GREEN}✅ Environment variables loaded.${NC}"
-else
-  echo -e "${YELLOW}ℹ️ No .env file found. Proceeding without loading environment variables.${NC}"
-fi
+echo "LOCAL_PATH: $LOCAL_PATH"
+echo "NAMESPACE: $NAMESPACE"
 
 # Parse command line arguments
-SCHEMA_ONLY=false
-DATA_ONLY=false
-FORCE=false
-TRUNCATE=false
-BACKUP_DATE=""
-
 while [[ $# -gt 0 ]]; do
   case $1 in
     -s|--schema-only)
-      SCHEMA_ONLY=true
+      RESTORE_OPTIONS="$RESTORE_OPTIONS --schema-only"
       shift
       ;;
     -d|--data-only)
-      DATA_ONLY=true
-      shift
-      ;;
-    -f|--force)
-      FORCE=true
+      RESTORE_OPTIONS="$RESTORE_OPTIONS --data-only"
       shift
       ;;
     -t|--truncate)
-      TRUNCATE=true
+      RESTORE_OPTIONS="$RESTORE_OPTIONS --truncate"
       shift
       ;;
     -h|--help)
@@ -131,27 +120,21 @@ if [ -z "$BACKUP_DATE" ]; then
   echo -e "${CYAN}ℹ️ No backup date specified, using latest: $BACKUP_DATE${NC}"
 fi
 
-# Validate arguments
-if [ "$SCHEMA_ONLY" = true ] && [ "$DATA_ONLY" = true ]; then
-  echo -e "${RED}❌ Cannot specify both --schema-only and --data-only${NC}"
-  exit 1
-fi
-
-# Set backup files
+# Validate backup files exist
 SCHEMA_FILE="$EXPORT_DIR/nutritional_info_schema_$BACKUP_DATE.sql.gz"
 DATA_FILE="$BACKUP_DIR/nutritional_info_backup_$BACKUP_DATE.sql.gz"
 
+echo ""
 print_separator "="
 echo -e "${CYAN}🔍 Validating backup files...${NC}"
 print_separator "-"
 
-# Check if files exist
-if [ "$SCHEMA_ONLY" = false ] && [ ! -f "$DATA_FILE" ]; then
+if [[ "$RESTORE_OPTIONS" != *"--schema-only"* ]] && [ ! -f "$DATA_FILE" ]; then
   echo -e "${RED}❌ Data backup file not found: $DATA_FILE${NC}"
   exit 1
 fi
 
-if [ "$DATA_ONLY" = false ] && [ ! -f "$SCHEMA_FILE" ]; then
+if [[ "$RESTORE_OPTIONS" != *"--data-only"* ]] && [ ! -f "$SCHEMA_FILE" ]; then
   echo -e "${RED}❌ Schema backup file not found: $SCHEMA_FILE${NC}"
   exit 1
 fi
@@ -160,253 +143,140 @@ echo -e "${GREEN}✅ Backup files validated${NC}"
 echo -e "${CYAN}📅 Using backup from: $BACKUP_DATE${NC}"
 
 # Show what will be restored
-if [ "$SCHEMA_ONLY" = true ]; then
+if [[ "$RESTORE_OPTIONS" == *"--schema-only"* ]]; then
   echo -e "${CYAN}📋 Will restore: Schema only${NC}"
-elif [ "$DATA_ONLY" = true ]; then
+elif [[ "$RESTORE_OPTIONS" == *"--data-only"* ]]; then
   echo -e "${CYAN}📊 Will restore: Data only${NC}"
-  if [ "$TRUNCATE" = true ]; then
+  if [[ "$RESTORE_OPTIONS" == *"--truncate"* ]]; then
     echo -e "${YELLOW}⚠️  Table will be truncated before restore${NC}"
   fi
 else
   echo -e "${CYAN}🔄 Will restore: Schema + Data${NC}"
 fi
 
-print_separator "="
-echo -e "${CYAN}🚀 Finding PostgreSQL pod in namespace recipe-database...${NC}"
-print_separator "-"
-
-POD_NAME=$(kubectl get pods -n recipe-database -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
-
-if [ -z "$POD_NAME" ]; then
-  echo -e "${RED}❌ No PostgreSQL pod found in namespace recipe-database with label app=recipe-database${NC}"
-  exit 1
-fi
-
-echo -e "${GREEN}✅ Found pod: $POD_NAME${NC}"
-
-# Confirmation prompt
-if [ "$FORCE" = false ]; then
+# Function to trigger the Kubernetes job
+trigger_job() {
   print_separator "="
-  echo -e "${YELLOW}⚠️  CONFIRMATION REQUIRED${NC}"
+  echo -e "${CYAN}🚀 Triggering Kubernetes restore job...${NC}"
   print_separator "-"
-  echo -e "${YELLOW}This will restore nutritional_info data from backup: $BACKUP_DATE${NC}"
   
-  if [ "$TRUNCATE" = true ]; then
-    echo -e "${RED}⚠️  WARNING: This will DELETE ALL existing data in nutritional_info table!${NC}"
-  fi
+  echo "📋 Job configuration: $YAML_PATH"
   
-  echo -e "${YELLOW}Do you want to continue? (yes/no):${NC}"
-  read -r confirmation
+  # Delete existing job if it exists
+  echo "Cleaning up any existing job..."
+  kubectl delete job "$JOB_NAME" -n "$NAMESPACE" --ignore-not-found=true
   
-  if [[ ! "$confirmation" =~ ^[Yy][Ee][Ss]$ ]]; then
-    echo -e "${CYAN}ℹ️ Restore cancelled by user${NC}"
-    exit 0
-  fi
-fi
-
-# Function to execute SQL in pod
-execute_sql() {
-  local sql="$1"
-  local description="$2"
+  # Wait a moment for cleanup
+  sleep 2
   
-  echo -e "${CYAN}🔧 $description...${NC}"
+  # Export environment variables for envsubst
+  export BACKUP_DATE
+  export RESTORE_OPTIONS
   
-  if kubectl exec -n recipe-database "$POD_NAME" -- \
-    bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -c \"$sql\"" > /dev/null; then
-    echo -e "${GREEN}✅ $description completed${NC}"
+  # Apply the job YAML with environment variable substitution
+  echo "Starting job: $JOB_NAME"
+  envsubst < "$YAML_PATH" | kubectl apply -f -
+  
+  # Wait for pod to be created
+  echo "Waiting for pod to be ready..."
+  if kubectl wait --for=condition=ready pod -l job-name="$JOB_NAME" -n "$NAMESPACE" --timeout=120s; then
+    print_separator "-"
+    echo -e "${GREEN}✅ Job started successfully${NC}"
   else
-    echo -e "${RED}❌ $description failed${NC}"
-    exit 1
+    print_separator "-"
+    echo -e "${YELLOW}⚠️ Pod took longer than expected to become ready, but job has started${NC}"
   fi
 }
 
-# Function to check if table exists
-check_table_exists() {
-  local exists
-  exists=$(kubectl exec -n recipe-database "$POD_NAME" -- \
-    bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -t -c \"
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = '$POSTGRES_SCHEMA' 
-        AND table_name = 'nutritional_info'
-      );
-    \"" 2>/dev/null | tr -d ' \n\t')
+# Function to monitor job progress
+monitor_job() {
+  print_separator "="
+  echo -e "${CYAN}⏳ Monitoring job progress...${NC}"
+  print_separator "-"
   
-  if [ "$exists" = "t" ]; then
-    return 0  # Table exists
-  else
-    return 1  # Table doesn't exist
+  # Get the pod name for the job
+  local pod_name
+  echo "Finding job pod..."
+  for i in {1..30}; do
+    pod_name=$(kubectl get pods -l job-name="$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    if [[ -n "$pod_name" ]]; then
+      echo "Found pod: $pod_name"
+      break
+    fi
+    echo "Waiting for pod to appear... (attempt $i/30)"
+    sleep 2
+  done
+  
+  if [[ -z "$pod_name" ]]; then
+    echo -e "${RED}❌ Could not find job pod after 60 seconds${NC}"
+    return 1
   fi
+  
+  # Follow the logs
+  echo "📋 Following job logs (Ctrl+C to stop watching, job will continue):"
+  print_separator "-"
+  
+  # Follow logs with timeout protection
+  kubectl logs -f "$pod_name" -n "$NAMESPACE" &
+  local logs_pid=$!
+  
+  # Wait for job completion or user interrupt
+  echo ""
+  echo -e "${CYAN}⏳ Waiting for job completion...${NC}"
+  if kubectl wait --for=condition=complete --timeout=1800s job/"$JOB_NAME" -n "$NAMESPACE"; then
+    echo ""
+    print_separator "-"
+    echo -e "${GREEN}✅ Job completed successfully!${NC}"
+  else
+    echo ""
+    print_separator "-"
+    echo -e "${YELLOW}⚠️ Job did not complete within timeout or failed${NC}"
+    
+    # Check job status
+    local job_status
+    job_status=$(kubectl get job "$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "Unknown")
+    echo "Job status: $job_status"
+    
+    if [[ "$job_status" == "Failed" ]]; then
+      echo -e "${RED}❌ Job failed - check logs above for details${NC}"
+      # Kill the logs process
+      kill $logs_pid 2>/dev/null || true
+      return 1
+    fi
+  fi
+  
+  # Kill the logs process if still running
+  kill $logs_pid 2>/dev/null || true
+  wait $logs_pid 2>/dev/null || true
 }
 
-# Function to restore file with progress monitoring
-restore_file_with_progress() {
-  local file="$1"
-  local description="$2"
-  local ignore_errors="${3:-false}"
-  local show_progress="${4:-false}"
+# Main execution
+main() {
+  local start_time=$(date +%s)
   
-  echo -e "${CYAN}📤 $description...${NC}"
+  print_separator "="
+  echo -e "${CYAN}🚀 Starting nutritional data restore process...${NC}"
+  print_separator "-"
+  echo "Started at: $(date)"
   
-  if [ "$show_progress" = "true" ]; then
-    # Start the restore in background
-    if [ "$ignore_errors" = "true" ]; then
-      gunzip -c "$file" | kubectl exec -i -n recipe-database "$POD_NAME" -- \
-        bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB'" > /dev/null 2>&1 &
-    else
-      gunzip -c "$file" | kubectl exec -i -n recipe-database "$POD_NAME" -- \
-        bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB'" > /dev/null &
-    fi
-    
-    local restore_pid=$!
-    local start_time=$(date +%s)
-    
-    echo -e "${CYAN}🔄 Monitoring restore progress...${NC}"
-    
-    # Monitor progress
-    while kill -0 $restore_pid 2>/dev/null; do
-      local current_rows
-      current_rows=$(kubectl exec -n recipe-database "$POD_NAME" -- \
-        bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -t -c \"
-          SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-        \"" 2>/dev/null | tr -d ' \n\t' || echo "0")
-      
-      local elapsed=$(($(date +%s) - start_time))
-      local mins=$((elapsed / 60))
-      local secs=$((elapsed % 60))
-      
-      printf "\r${CYAN}📊 Rows restored: %s | Time elapsed: %02d:%02d${NC}" "$current_rows" "$mins" "$secs"
-      sleep 3
-    done
-    
-    # Wait for the process to complete and get exit code
-    wait $restore_pid
-    local exit_code=$?
-    
-    # Clear the progress line and show completion
-    printf "\r%*s\r" 80 ""
-    
-    if [ $exit_code -eq 0 ]; then
-      local final_rows
-      final_rows=$(kubectl exec -n recipe-database "$POD_NAME" -- \
-        bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -t -c \"
-          SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-        \"" 2>/dev/null | tr -d ' \n\t')
-      
-      local total_time=$(($(date +%s) - start_time))
-      local total_mins=$((total_time / 60))
-      local total_secs=$((total_time % 60))
-      
-      echo -e "${GREEN}✅ $description completed${NC}"
-      echo -e "${CYAN}📊 Final row count: $final_rows${NC}"
-      echo -e "${CYAN}⏱️  Total time: ${total_mins}m ${total_secs}s${NC}"
-    else
-      echo -e "${RED}❌ $description failed${NC}"
-      exit 1
-    fi
-  else
-    # Original non-progress version for schema
-    if [ "$ignore_errors" = "true" ]; then
-      local error_output
-      error_output=$(gunzip -c "$file" | kubectl exec -i -n recipe-database "$POD_NAME" -- \
-        bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB'" 2>&1)
-      
-      local filtered_errors
-      filtered_errors=$(echo "$error_output" | grep -v "already exists" | grep -v "must be owner" | grep -v "no privileges were granted" || true)
-      
-      if [ -n "$filtered_errors" ]; then
-        echo -e "${YELLOW}⚠️ Some schema restore issues (non-critical):${NC}"
-        echo "$filtered_errors" | head -5
-      fi
-      
-      echo -e "${GREEN}✅ $description completed (with expected warnings)${NC}"
-    else
-      if gunzip -c "$file" | kubectl exec -i -n recipe-database "$POD_NAME" -- \
-        bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB'" > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ $description completed${NC}"
-      else
-        echo -e "${RED}❌ $description failed${NC}"
-        exit 1
-      fi
-    fi
-  fi
+  # Trigger the Kubernetes job
+  trigger_job
+  
+  # Monitor job progress
+  monitor_job
+  
+  local end_time=$(date +%s)
+  local duration=$((end_time - start_time))
+  
+  print_separator "="
+  echo -e "${GREEN}✅ Nutritional data restore process completed!${NC}"
+  echo "    Total time:  ${duration}s"
+  echo "    Finished at: $(date)"
+  print_separator "="
 }
 
-print_separator "="
-echo -e "${CYAN}🔄 Starting restore process...${NC}"
-print_separator "-"
+# Handle interrupts gracefully
+trap 'print_separator "-"; echo -e "${RED}❌ Script interrupted${NC}"; print_separator "="; exit 130' INT TERM
 
-# Set search path
-execute_sql "SET search_path TO $POSTGRES_SCHEMA;" "Setting search path"
-
-# Get current table stats before restore
-if kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -t -c \"
-    SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-  \"" 2>/dev/null | tr -d ' \n\t'; then
-  ROWS_BEFORE=$(kubectl exec -n recipe-database "$POD_NAME" -- \
-    bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -t -c \"
-      SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-    \"" 2>/dev/null | tr -d ' \n\t')
-  echo -e "${CYAN}📊 Current rows in table: $ROWS_BEFORE${NC}"
-else
-  ROWS_BEFORE="N/A (table may not exist)"
-  echo -e "${CYAN}📊 Current table status: $ROWS_BEFORE${NC}"
-fi
-
-# Restore schema if needed
-if [ "$DATA_ONLY" = false ]; then
-  print_separator "-"
-  
-  if check_table_exists; then
-    echo -e "${YELLOW}ℹ️ Table nutritional_info already exists, skipping schema restore${NC}"
-    echo -e "${CYAN}💡 Use --data-only flag if you only want to restore data${NC}"
-  else
-    echo -e "${CYAN}📋 Table doesn't exist, creating from schema...${NC}"
-    restore_file_with_progress "$SCHEMA_FILE" "Restoring table schema" "true" "false"
-  fi
-fi
-
-# Truncate table if requested
-if [ "$TRUNCATE" = true ] && [ "$SCHEMA_ONLY" = false ]; then
-  print_separator "-"
-  execute_sql "TRUNCATE TABLE nutritional_info;" "Truncating table"
-fi
-
-# Restore data if needed (WITH PROGRESS)
-if [ "$SCHEMA_ONLY" = false ]; then
-  print_separator "-"
-  restore_file_with_progress "$DATA_FILE" "Restoring table data" "false" "true"
-fi
-
-print_separator "="
-echo -e "${CYAN}📈 Getting final table statistics...${NC}"
-print_separator "-"
-
-kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -c \"
-    SELECT 
-      'Final Rows: ' || COUNT(*) as stat
-    FROM $POSTGRES_SCHEMA.nutritional_info
-    UNION ALL
-    SELECT 
-      'Table Size: ' || pg_size_pretty(pg_total_relation_size('$POSTGRES_SCHEMA.nutritional_info'))
-    UNION ALL
-    SELECT 
-      'Data Size: ' || pg_size_pretty(pg_relation_size('$POSTGRES_SCHEMA.nutritional_info'));
-  \"" | while read -r line; do
-  echo -e "${CYAN}  $line${NC}"
-done
-
-print_separator "="
-echo -e "${GREEN}🎉 Nutritional data restore completed successfully!${NC}"
-echo -e "${CYAN}📅 Backup date: $BACKUP_DATE${NC}"
-echo -e "${CYAN}📊 Rows before: $ROWS_BEFORE${NC}"
-
-ROWS_AFTER=$(kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -t -c \"
-    SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-  \"" 2>/dev/null | tr -d ' \n\t')
-echo -e "${CYAN}📊 Rows after: $ROWS_AFTER${NC}"
-echo -e "${CYAN}⏰ Restore completed at: $(date)${NC}"
-print_separator "="
+# Run main function
+main "$@"
