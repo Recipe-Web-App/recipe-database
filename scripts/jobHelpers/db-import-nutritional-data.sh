@@ -15,7 +15,7 @@ print_separator() {
 
 # Configuration
 DATA_MOUNT_DIR="/app/data"  # Where the volume is actually mounted
-CSV_FILE="$DATA_MOUNT_DIR/openfoodfacts.csv"
+CSV_FILE="$DATA_MOUNT_DIR/openfoodfacts.csv.gz"  # Use compressed file directly
 PYTHON_SCRIPT="/app/python/nutritional_data_importer/nutritional_data_importer.py"
 
 print_separator "="

@@ -22,7 +22,6 @@ YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-import-nutritional-data-job.yaml"
 OPENFOODFACTS_URL="https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz"
 LOCAL_DATA_DIR="${LOCAL_PATH}/db/data/imports"
 COMPRESSED_FILE="${LOCAL_DATA_DIR}/openfoodfacts.csv.gz"
-EXTRACTED_FILE="${LOCAL_DATA_DIR}/openfoodfacts.csv"
 
 # Options
 FORCE_DOWNLOAD="${FORCE_DOWNLOAD:-false}"
@@ -68,27 +67,6 @@ download_csv() {
   local file_size=$(du -h "$COMPRESSED_FILE" | cut -f1)
   print_separator "-"
   echo "✅ Download completed - File size: $file_size"
-}
-
-# Function to extract the CSV
-extract_csv() {
-  print_separator "="
-  echo "📦 Extracting CSV file..."
-  print_separator "-"
-  echo "Extracting: $COMPRESSED_FILE -> $EXTRACTED_FILE"
-  
-  gunzip -c "$COMPRESSED_FILE" > "$EXTRACTED_FILE"
-  
-  if [[ ! -f "$EXTRACTED_FILE" ]]; then
-    print_separator "-"
-    echo "❌ Error: Extraction failed - file not found"
-    print_separator "="
-    exit 1
-  fi
-  
-  print_separator "-"
-  local extracted_size=$(du -h "$EXTRACTED_FILE" | cut -f1)
-  echo "✅ Extraction completed - File size: $extracted_size"
 }
 
 # Function to trigger the Kubernetes job
@@ -195,11 +173,6 @@ cleanup() {
       rm -f "$COMPRESSED_FILE"
     fi
     
-    if [[ -f "$EXTRACTED_FILE" ]]; then
-      echo "Removing: $EXTRACTED_FILE"
-      rm -f "$EXTRACTED_FILE"
-    fi
-    
     print_separator "-"
     echo "✅ Cleanup completed"
   else
@@ -220,16 +193,8 @@ main() {
   if [[ ! -f "$COMPRESSED_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
     download_csv
   else
-    echo "ℹ️  Compressed file already exists: $COMPRESSED_FILE"
+    echo "ℹ️  Compressed CSV already exists: $COMPRESSED_FILE"
     echo "    Use FORCE_DOWNLOAD=true to force re-download"
-  fi
-  
-  # Extract if needed
-  if [[ ! -f "$EXTRACTED_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
-    extract_csv
-  else
-    echo "ℹ️  Extracted file already exists: $EXTRACTED_FILE"
-    echo "    Use FORCE_DOWNLOAD=true to force re-extraction"
   fi
   
   # Trigger the Kubernetes job
