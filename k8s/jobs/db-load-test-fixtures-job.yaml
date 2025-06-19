@@ -50,7 +50,7 @@ spec:
               mountPath: /app/sql
             - name: scripts-volume
               mountPath: /app/scripts
-          command: ["bash", "-c", "/scripts/jobHelpers/db-load-test-fixtures.sh"]
+          command: ["bash", "-c", "/app/scripts/jobHelpers/db-load-test-fixtures.sh"]
       volumes:
         - name: sql-volume
           hostPath:
