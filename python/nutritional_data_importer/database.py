@@ -6,6 +6,7 @@ import logging
 import os
 import psycopg2
 from psycopg2.extras import execute_batch
+from data_cleaning import clean_numeric_value
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,8 @@ def get_table_columns():
         'generic_name',
         'brands',
         'categories',
+        'serving_quantity',
+        'serving_measurement',
         
         # Classification data
         'allergens',
@@ -287,11 +290,15 @@ def update_existing_product_batch(conn, original_row, merged_row, target_columns
         for col in target_columns:
             if col == 'code':  # Skip primary identifier
                 continue
-                
+
             db_col = col.replace('-', '_')
             original_value = original_row.get(db_col)
             merged_value = merged_row.get(db_col)
-        
+
+            # Apply numeric cleaning/rounding for numeric fields to match DB precision
+            if col.endswith('_100g') or col == 'nutriscore_score' or col == 'serving_quantity':
+                merged_value = clean_numeric_value(merged_value, col)
+
             # Only update if value has actually changed
             if original_value != merged_value:
                 if db_col == 'allergens':

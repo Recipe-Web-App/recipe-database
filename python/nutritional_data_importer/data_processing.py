@@ -4,7 +4,7 @@ Data processing utilities for OpenFoodFacts data import.
 
 import logging
 import pandas as pd
-from data_cleaning import clean_numeric_value, clean_nutriscore_grade
+from data_cleaning import clean_numeric_value, clean_nutriscore_grade, parse_serving_size
 from allergen_mapping import map_allergens_to_enum
 
 logger = logging.getLogger(__name__)
@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 def prepare_row_data(row, csv_columns, target_columns):
     """Prepare a single row of data for database insertion."""
     row_data = []
+    
+    # Pre-parse serving info since it creates multiple target columns from one source
+    parsed_quantity, parsed_unit = parse_serving_size(row.get('serving_size'))
     
     # Define which columns are numeric and need cleaning
     numeric_columns = [
@@ -22,11 +25,17 @@ def prepare_row_data(row, csv_columns, target_columns):
         'omega-6-fat_100g', 'omega-9-fat_100g', 'trans-fat_100g', 'fiber_100g', 'soluble-fiber_100g',
         'insoluble-fiber_100g', 'vitamin-a_100g', 'vitamin-b6_100g', 'vitamin-b12_100g',
         'vitamin-c_100g', 'vitamin-d_100g', 'vitamin-e_100g', 'vitamin-k_100g',
-        'calcium_100g', 'iron_100g', 'magnesium_100g', 'potassium_100g', 'sodium_100g', 'zinc_100g'
+        'calcium_100g', 'iron_100g', 'magnesium_100g', 'potassium_100g', 'sodium_100g', 'zinc_100g',
+        'serving_quantity'
     ]
     
     for col in target_columns:
-        if col in csv_columns:
+        # Handle derived columns from serving_size parsing
+        if col == 'serving_quantity':
+            value = clean_numeric_value(parsed_quantity, col)
+        elif col == 'serving_measurement':
+            value = parsed_unit
+        elif col in csv_columns:
             value = row[col]
             
             # Handle allergens column specially - convert to enum array
@@ -37,6 +46,9 @@ def prepare_row_data(row, csv_columns, target_columns):
                     value = allergen_enums
                 else:
                     value = None
+            # Handle food_groups column specially - convert to enum
+            elif col == 'food_groups':
+                value = map_food_groups_to_enum(value)
             # Handle numeric columns with precision limits
             elif col in numeric_columns:
                 value = clean_numeric_value(value, col)
@@ -50,11 +62,11 @@ def prepare_row_data(row, csv_columns, target_columns):
                     value = None
             else:
                 value = None
-                
-            row_data.append(value)
         else:
             # Column not in CSV, set to None
-            row_data.append(None)
+            value = None
+                
+        row_data.append(value)
     
     return row_data
 

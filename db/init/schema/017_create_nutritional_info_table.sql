@@ -15,10 +15,12 @@ CREATE TABLE IF NOT EXISTS nutritional_info (
   generic_name TEXT,
   brands TEXT,
   categories TEXT,
+  serving_quantity DECIMAL(8, 3),
+  serving_measurement recipe_manager.INGREDIENT_UNIT_ENUM,
 
   -- Allergens and classification (for classification)
   allergens recipe_manager.ALLERGEN_ENUM [],
-  food_groups TEXT,
+  food_groups recipe_manager.FOOD_GROUP_ENUM,
 
   -- Classification scores
   nutriscore_score INTEGER,
@@ -92,17 +94,22 @@ IS 'OpenFoodFacts barcode/product code (unique identifier from CSV)';
 COMMENT ON COLUMN nutritional_info.product_name
 IS 'Product name from OpenFoodFacts CSV';
 COMMENT ON COLUMN nutritional_info.generic_name
-IS 'Generic product name from OpenFoodFacts CSV (more standardized than product_name)';
+IS 'Generic product name from OpenFoodFacts CSV '
+' (more standardized than product_name)';
 COMMENT ON COLUMN nutritional_info.brands
 IS 'Comma-separated brand names from CSV';
 COMMENT ON COLUMN nutritional_info.categories
 IS 'Comma-separated product categories from CSV';
+COMMENT ON COLUMN nutritional_info.serving_quantity
+IS 'Serving quantity (amount) parsed from serving_size CSV field';
+COMMENT ON COLUMN nutritional_info.serving_measurement
+IS 'Standardized serving unit enum, parsed from serving_size CSV field';
 
 -- Classification data
 COMMENT ON COLUMN nutritional_info.allergens
 IS 'Array of standardized allergen enum values (parsed from CSV)';
 COMMENT ON COLUMN nutritional_info.food_groups
-IS 'Comma-separated food group classifications from CSV';
+IS 'Standardized food group enum (mapped from OpenFoodFacts CSV taxonomy)';
 COMMENT ON COLUMN nutritional_info.nutriscore_score
 IS 'Nutri-Score numeric value from CSV (typically 1-5)';
 COMMENT ON COLUMN nutritional_info.nutriscore_grade

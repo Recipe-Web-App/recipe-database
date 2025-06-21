@@ -52,3 +52,17 @@ DO $$ BEGIN CREATE TYPE recipe_manager.allergen_enum AS ENUM (
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
+-- Enum for food groups (based on OpenFoodFacts taxonomy)
+DO $$ BEGIN CREATE TYPE recipe_manager.food_group_enum AS ENUM (
+  -- Plant-based whole foods
+  'VEGETABLES', 'FRUITS', 'GRAINS', 'LEGUMES', 'NUTS_SEEDS',
+  -- Animal products
+  'MEAT', 'POULTRY', 'SEAFOOD', 'DAIRY',
+  -- Processed and manufactured foods
+  'BEVERAGES', 'PROCESSED_FOODS',
+  -- Fallback
+  'UNKNOWN'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
