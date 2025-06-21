@@ -16,7 +16,7 @@ VALUES (
     WHERE title = 'Classic Pancakes'
   ),
   '11111111-1111-1111-1111-111111111111',
-  'ingredient',
+  'INGREDIENT',
   'UPDATE',
   '{"title": "Classic Pancakes", "ingredients": ["flour", "milk", "eggs"]}',
   '{"title": "Classic Pancakes",
@@ -31,7 +31,7 @@ VALUES (
     WHERE title = 'Classic Pancakes'
   ),
   '11111111-1111-1111-1111-111111111111',
-  'step',
+  'STEP',
   'DELETE',
   '{"step": "Add sugar to taste"}',
   '{}',
