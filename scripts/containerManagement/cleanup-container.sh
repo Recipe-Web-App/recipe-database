@@ -57,6 +57,12 @@ print_separator "-"
 kubectl delete job db-load-test-fixtures-job -n "$NAMESPACE" --ignore-not-found
 
 print_separator "="
+echo "🧹 Deleting database import nutritional data job..."
+print_separator "-"
+
+kubectl delete job db-import-nutritional-data-job -n "$NAMESPACE" --ignore-not-found
+
+print_separator "="
 echo "🔌 Checking for active Minikube mount..."
 print_separator "-"
 

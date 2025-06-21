@@ -57,10 +57,10 @@ spec:
                   key: RECIPE_SCRAPER_PASSWORD
           volumeMounts:
             - name: sql-volume
-              mountPath: /sql
+              mountPath: /app/sql
             - name: scripts-volume
-              mountPath: /scripts
-          command: ["bash", "-c", "/scripts/jobHelpers/db-load-schema.sh"]
+              mountPath: /app/scripts
+          command: ["bash", "-c", "/app/scripts/jobHelpers/db-load-schema.sh"]
       volumes:
         - name: sql-volume
           hostPath:

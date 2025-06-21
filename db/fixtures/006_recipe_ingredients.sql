@@ -6,9 +6,9 @@ INSERT INTO recipe_manager.recipe_ingredients (
   unit,
   is_optional
 )
-VALUES (1, 1, 50, 'g', FALSE),
+VALUES (1, 1, 50, 'G', FALSE),
 -- Sugar in pancakes
-(1, 3, 200, 'g', FALSE),
+(1, 3, 200, 'G', FALSE),
 -- Flour in pancakes
-(2, 2, 5, 'g', FALSE);
+(2, 2, 5, 'G', FALSE);
 -- Salt in carbonara

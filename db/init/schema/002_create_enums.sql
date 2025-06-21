@@ -1,48 +1,68 @@
 -- db/init/schema/002_create_enums.sql
 -- Enum for ingredient units
 DO $$ BEGIN CREATE TYPE recipe_manager.ingredient_unit_enum AS ENUM (
-  'g',
-  'kg',
-  'oz',
-  'lb',
-  'ml',
-  'l',
-  'cup',
-  'tbsp',
-  'tsp',
-  'piece',
-  'clove',
-  'slice',
-  'pinch',
-  'can',
-  'bottle',
-  'packet',
-  'unit'
+  'G', 'KG', 'OZ', 'LB', 'ML', 'L', 'CUP', 'TBSP', 'TSP', 'PIECE',
+  'CLOVE', 'SLICE', 'PINCH', 'CAN', 'BOTTLE', 'PACKET', 'UNIT'
 );
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for meal types
 DO $$ BEGIN CREATE TYPE recipe_manager.meal_type_enum
-  AS ENUM ('breakfast', 'lunch', 'dinner', 'snack', 'dessert');
+  AS ENUM ('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'DESSERT');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for recipe revision categories
 DO $$ BEGIN CREATE TYPE recipe_manager.revision_category_enum
-   as ENUM ('ingredient', 'step');
+  as ENUM ('INGREDIENT', 'STEP');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for recipe revision types
 DO $$ BEGIN CREATE TYPE recipe_manager.revision_type_enum
-   AS ENUM ('ADD', 'UPDATE', 'DELETE');
+  AS ENUM ('ADD', 'UPDATE', 'DELETE');
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 -- Enum for recipe difficulty levels
 DO $$ BEGIN CREATE TYPE recipe_manager.difficulty_level_enum
-   AS ENUM ('beginner', 'easy', 'medium', 'hard', 'expert');
+  AS ENUM ('BEGINNER', 'EASY', 'MEDIUM', 'HARD', 'EXPERT');
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+-- Enum for allergens
+DO $$ BEGIN CREATE TYPE recipe_manager.allergen_enum AS ENUM (
+  -- FDA Major Allergens (Top 9)
+  'MILK', 'EGGS', 'FISH', 'SHELLFISH', 'TREE_NUTS', 'PEANUTS',
+  'WHEAT', 'SOYBEANS', 'SESAME',
+  -- Additional EU Major Allergens
+  'CELERY', 'MUSTARD', 'LUPIN', 'SULPHITES',
+  -- Tree Nut Specifics
+  'ALMONDS', 'CASHEWS', 'HAZELNUTS', 'WALNUTS',
+  -- Common Additional Allergens
+  'GLUTEN', 'COCONUT', 'CORN', 'YEAST', 'GELATIN', 'KIWI',
+  -- Reiligious/Dietary
+  'PORK', 'BEEF', 'ALCOHOL',
+  -- Additives/Chemicals
+  'SULFUR_DIOXIDE', 'PHENYLALANINE',
+  -- Other
+  'NONE', 'UNKNOWN'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+-- Enum for food groups (based on OpenFoodFacts taxonomy)
+DO $$ BEGIN CREATE TYPE recipe_manager.food_group_enum AS ENUM (
+  -- Plant-based whole foods
+  'VEGETABLES', 'FRUITS', 'GRAINS', 'LEGUMES', 'NUTS_SEEDS',
+  -- Animal products
+  'MEAT', 'POULTRY', 'SEAFOOD', 'DAIRY',
+  -- Processed and manufactured foods
+  'BEVERAGES', 'PROCESSED_FOODS',
+  -- Fallback
+  'UNKNOWN'
+);
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;

@@ -20,7 +20,7 @@ VALUES (
   4,
   10,
   20,
-  'easy'::recipe_manager.difficulty_level_enum,
+  'EASY'::recipe_manager.difficulty_level_enum,
   'https://example.com/classic-pancakes',
   NOW(),
   NOW()
@@ -33,7 +33,7 @@ VALUES (
   2,
   15,
   15,
-  'medium'::recipe_manager.difficulty_level_enum,
+  'MEDIUM'::recipe_manager.difficulty_level_enum,
   'https://example.com/spaghetti-carbonara',
   NOW(),
   NOW()

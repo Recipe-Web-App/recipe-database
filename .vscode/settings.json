@@ -2,6 +2,58 @@
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
 
+  // Python formatting and linting (matching pre-commit config)
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.isort": "explicit"
+    }
+  },
+
+  // Shell script linting and formatting (matching pre-commit config)
+  "[shellscript]": {
+    "editor.formatOnSave": true
+  },
+
+  // Python-specific settings
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": ["--line-length=88"],
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.flake8Args": [
+    "--max-line-length=88",
+    "--extend-ignore=E203,W503"
+  ],
+  "python.linting.mypyEnabled": true,
+  "python.linting.mypyArgs": [
+    "--ignore-missing-imports",
+    "--no-strict-optional"
+  ],
+  "isort.args": [
+    "--profile=black",
+    "--line-length=88"
+  ],
+
+  // Shell script linting settings (matching pre-commit config)
+  "shellcheck.enable": true,
+  "shellcheck.executablePath": "shellcheck",
+  "shellcheck.exclude": [],
+  "shellcheck.customArgs": ["-x"],
+  "shellformat.useEditorConfig": true,
+  "shellformat.effectLanguages": [
+    "shellscript",
+    "dockerfile",
+    "dotenv",
+    "hosts",
+    "jvmoptions",
+    "ignore",
+    "gitignore",
+    "spring-boot-properties",
+    "azcli",
+    "bats"
+  ],
+
   // SQL formatting
   "sqltools.format": {
     "keywordCase": "upper",     // SELECT instead of select
@@ -29,6 +81,97 @@
   // Enable formatting on save for SQL files
   "[sql]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "SQLFluff.sqlfluff"
-  }
+    "editor.defaultFormatter": "dorzey.vscode-sqlfluff"
+  },
+  "cSpell.words": [
+    "alkohol",
+    "almendras",
+    "amandes",
+    "ammoniumsulfit",
+    "arachides",
+    "bœuf",
+    "braunsenfsaat",
+    "cashewkeme",
+    "céleri",
+    "céréales",
+    "chunksize",
+    "contenant",
+    "coque",
+    "eier",
+    "eieren",
+    "eigelb",
+    "emmental",
+    "enthält",
+    "envsubst",
+    "erdnüsse",
+    "fisch",
+    "frutta",
+    "garnelen",
+    "gelbsenfsaat",
+    "getreide",
+    "glutenhaltiges",
+    "graines",
+    "guscio",
+    "hartweizengrieß",
+    "haselnuss",
+    "hazlenut",
+    "hefe",
+    "hoki",
+    "hühnerei",
+    "jajka",
+    "kaliummetabisulfit",
+    "keine",
+    "kuhmilch",
+    "leite",
+    "levelname",
+    "levure",
+    "MAINT",
+    "mais",
+    "mandeln",
+    "mandorle",
+    "metabisulphite",
+    "milchbestandteile",
+    "milcheiweiss",
+    "milcheiweiß",
+    "milchprodukte",
+    "milkfat",
+    "mjölk",
+    "mleko",
+    "mléko",
+    "moutarde",
+    "natriummetabisulfit",
+    "noix",
+    "nüsse",
+    "nutriscore",
+    "openfoodfacts",
+    "pescado",
+    "pesce",
+    "PGPASSWORD",
+    "phenilananin",
+    "phenylalalnine",
+    "phenylalaninquelle",
+    "pinda",
+    "porc",
+    "psql",
+    "schnittselerie",
+    "schnittsellerie",
+    "schwein",
+    "sellerie",
+    "senf",
+    "sésame",
+    "sesamsaat",
+    "soja",
+    "sojabohnen",
+    "sojaöl",
+    "sojaprotein",
+    "sulfit",
+    "Sulphites",
+    "trigo",
+    "uova",
+    "wallnuts",
+    "walnüsse",
+    "weizen",
+    "weizenmehl",
+    "weizenprotein"
+  ]
 }

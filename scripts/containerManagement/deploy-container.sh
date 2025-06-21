@@ -112,37 +112,37 @@ eval "$(minikube docker-env)"
 docker build -t "$FULL_IMAGE_NAME" .
 echo "✅ Docker image '${FULL_IMAGE_NAME}' built successfully."
 
-print_separator
+print_separator "="
 echo "⚙️ Creating/Updating ConfigMap from env..."
-print_separator
+print_separator "-"
 
 envsubst < "${CONFIG_DIR}/configmap-template.yaml" | kubectl apply -f -
 
-print_separator
+print_separator "="
 echo "🔐 Creating/updating Secret..."
-print_separator
+print_separator "-"
 
 kubectl delete secret "$SECRET_NAME" -n "$NAMESPACE" --ignore-not-found
 envsubst < "${CONFIG_DIR}/secret-template.yaml" | kubectl apply -f -
 
-print_separator
+print_separator "="
 echo "💾 Applying PersistentVolumeClaim..."
-print_separator
+print_separator "-"
 
 kubectl apply -f "${CONFIG_DIR}/pvc.yaml"
 
 kubectl get pv -o json | jq -r '.items[] | select(.spec.claimRef.namespace=="recipe-database") | .metadata.name' | \
   xargs -I{} kubectl label pv {} app=recipe-database --overwrite
 
-print_separator
+print_separator "="
 echo "📦 Deploying PostgreSQL container..."
-print_separator
+print_separator "-"
 
 kubectl apply -f "${CONFIG_DIR}/deployment.yaml"
 
-print_separator
+print_separator "="
 echo "🌐 Exposing PostgreSQL via ClusterIP Service..."
-print_separator
+print_separator "-"
 
 kubectl apply -f "${CONFIG_DIR}/service.yaml"
 

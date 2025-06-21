@@ -30,7 +30,7 @@ fi
 
 print_separator "="
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_DIR="$(dirname "$0")/../../db/backups"
+BACKUP_DIR="$(dirname "$0")/../../db/data/backups"
 BACKUP_FILE="$BACKUP_DIR/recipe_backup_$DATE.sql"
 
 mkdir -p "$BACKUP_DIR"

@@ -5,5 +5,5 @@ INSERT INTO recipe_manager.meal_plan_recipes (
   meal_date,
   meal_type
 )
-VALUES (1, 1, '2025-06-01', 'breakfast'),
-(1, 2, '2025-06-01', 'lunch');
+VALUES (1, 1, '2025-06-01', 'BREAKFAST'),
+(1, 2, '2025-06-01', 'LUNCH');

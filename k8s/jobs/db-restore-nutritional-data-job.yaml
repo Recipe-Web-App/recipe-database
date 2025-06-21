@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-restore-nutritional-data-job
+  namespace: recipe-database
+  labels:
+    app: recipe-database
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: restore-nutritional-data
+        image: recipe-database:latest
+        imagePullPolicy: Never
+        env:
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-database-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-database-config
+              key: POSTGRES_DB
+        - name: POSTGRES_SCHEMA
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-database-config
+              key: POSTGRES_SCHEMA
+        - name: DB_MAINT_USER
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-database-config
+              key: DB_MAINT_USER
+        - name: DB_MAINT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: recipe-database-secret
+              key: DB_MAINT_PASSWORD
+        - name: BACKUP_DATE
+          value: "${BACKUP_DATE}"
+        - name: RESTORE_OPTIONS
+          value: "${RESTORE_OPTIONS}"
+        volumeMounts:
+        - name: backups-dir
+          mountPath: /app/db/data/backups
+          readOnly: true
+        - name: exports-dir
+          mountPath: /app/db/data/exports
+          readOnly: true
+        - name: scripts-dir
+          mountPath: /app/scripts
+          readOnly: true
+        command:
+        - /bin/bash
+        - /app/scripts/jobHelpers/db-restore-nutritional-data.sh
+      volumes:
+      - name: backups-dir
+        hostPath:
+          path: /mnt/recipe-database/db/data/backups
+          type: Directory
+      - name: exports-dir
+        hostPath:
+          path: /mnt/recipe-database/db/data/exports
+          type: Directory
+      - name: scripts-dir
+        hostPath:
+          path: /mnt/recipe-database/scripts
+          type: Directory
+  backoffLimit: 1
