@@ -11,3 +11,5 @@ venv/
 
 db/data/*/*
 !db/data/*/.gitkeep
+
+tmp/
