@@ -6,6 +6,7 @@ import logging
 import pandas as pd
 from data_cleaning import clean_numeric_value, clean_nutriscore_grade, parse_serving_size
 from allergen_mapping import map_allergens_to_enum
+from food_groups_mapping import map_food_groups_to_enum
 
 logger = logging.getLogger(__name__)
 
