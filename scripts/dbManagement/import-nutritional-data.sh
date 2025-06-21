@@ -45,7 +45,7 @@ download_csv() {
   print_separator "-"
   echo "URL: $OPENFOODFACTS_URL"
   echo "Destination: $COMPRESSED_FILE"
-  
+
   if command -v wget >/dev/null 2>&1; then
     wget --continue --progress=bar:force:noscroll -O "$COMPRESSED_FILE" "$OPENFOODFACTS_URL"
   elif command -v curl >/dev/null 2>&1; then
@@ -56,15 +56,16 @@ download_csv() {
     print_separator "="
     exit 1
   fi
-  
+
   if [[ ! -f "$COMPRESSED_FILE" ]]; then
     print_separator "-"
     echo "❌ Error: Download failed - file not found"
     print_separator "="
     exit 1
   fi
-  
-  local file_size=$(du -h "$COMPRESSED_FILE" | cut -f1)
+
+  local file_size
+  file_size=$(du -h "$COMPRESSED_FILE" | cut -f1)
   print_separator "-"
   echo "✅ Download completed - File size: $file_size"
 }
@@ -74,20 +75,20 @@ trigger_job() {
   print_separator "="
   echo "🚀 Triggering Kubernetes import job..."
   print_separator "-"
-  
+
   echo "📋 Job configuration: $YAML_PATH"
-  
+
   # Delete existing job if it exists
   echo "Cleaning up any existing job..."
   kubectl delete job "$JOB_NAME" -n "$NAMESPACE" --ignore-not-found=true
-  
+
   # Wait a moment for cleanup
   sleep 2
-  
+
   # Apply the job YAML
   echo "Starting job: $JOB_NAME"
   kubectl apply -f "$YAML_PATH"
-  
+
   # Wait for pod to be created
   echo "Waiting for pod to be ready..."
   if kubectl wait --for=condition=ready pod -l job-name="$JOB_NAME" -n "$NAMESPACE" --timeout=120s; then
@@ -104,7 +105,7 @@ monitor_job() {
   print_separator "="
   echo "⏳ Monitoring job progress..."
   print_separator "-"
-  
+
   # Get the pod name for the job
   local pod_name
   echo "Finding job pod..."
@@ -117,20 +118,20 @@ monitor_job() {
     echo "Waiting for pod to appear... (attempt $i/30)"
     sleep 2
   done
-  
+
   if [[ -z "$pod_name" ]]; then
     echo "❌ Could not find job pod after 60 seconds"
     return 1
   fi
-  
+
   # Follow the logs
   echo "� Following job logs (Ctrl+C to stop watching, job will continue):"
   print_separator "-"
-  
+
   # Follow logs with timeout protection
   kubectl logs -f "$pod_name" -n "$NAMESPACE" &
   local logs_pid=$!
-  
+
   # Wait for job completion or user interrupt
   echo ""
   echo "⏳ Waiting for job completion..."
@@ -142,12 +143,12 @@ monitor_job() {
     echo ""
     print_separator "-"
     echo "⚠️ Job did not complete within timeout or failed"
-    
+
     # Check job status
     local job_status
     job_status=$(kubectl get job "$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "Unknown")
     echo "Job status: $job_status"
-    
+
     if [[ "$job_status" == "Failed" ]]; then
       echo "❌ Job failed - check logs above for details"
       # Kill the logs process
@@ -155,7 +156,7 @@ monitor_job() {
       return 1
     fi
   fi
-  
+
   # Kill the logs process if still running
   kill $logs_pid 2>/dev/null || true
   wait $logs_pid 2>/dev/null || true
@@ -167,12 +168,12 @@ cleanup() {
     print_separator "="
     echo "🧹 Cleaning up downloaded files..."
     print_separator "-"
-    
+
     if [[ -f "$COMPRESSED_FILE" ]]; then
       echo "Removing: $COMPRESSED_FILE"
       rm -f "$COMPRESSED_FILE"
     fi
-    
+
     print_separator "-"
     echo "✅ Cleanup completed"
   else
@@ -182,13 +183,14 @@ cleanup() {
 
 # Main execution
 main() {
-  local start_time=$(date +%s)
-  
+  local start_time
+  start_time=$(date +%s)
+
   print_separator "="
   echo "🚀 Starting OpenFoodFacts import process..."
   print_separator "-"
   echo "Started at: $(date)"
-  
+
   # Download if needed
   if [[ ! -f "$COMPRESSED_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
     download_csv
@@ -196,19 +198,20 @@ main() {
     echo "ℹ️  Compressed CSV already exists: $COMPRESSED_FILE"
     echo "    Use FORCE_DOWNLOAD=true to force re-download"
   fi
-  
+
   # Trigger the Kubernetes job
   trigger_job
-  
+
   # Monitor job progress
   monitor_job
-  
+
   # Cleanup files
   cleanup
-  
-  local end_time=$(date +%s)
+
+  local end_time
+  end_time=$(date +%s)
   local duration=$((end_time - start_time))
-  
+
   print_separator "="
   echo "✅ OpenFoodFacts import process completed!"
   echo "    Total time:  ${duration}s"

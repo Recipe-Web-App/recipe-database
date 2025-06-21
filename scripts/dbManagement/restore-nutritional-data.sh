@@ -36,7 +36,7 @@ RESTORE_OPTIONS=""
 # Function to get latest backup date
 get_latest_backup() {
   local latest_backup
-  latest_backup=$(ls -t "$BACKUP_DIR"/nutritional_info_backup_*.sql.gz 2>/dev/null | head -n 1)
+  latest_backup=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -n 1)
   if [ -n "$latest_backup" ]; then
     basename "$latest_backup" | sed 's/nutritional_info_backup_\(.*\)\.sql\.gz/\1/'
   else
@@ -64,10 +64,13 @@ show_usage() {
   echo "  $0 --truncate --data-only                     # Clear table and restore latest data"
   echo ""
   echo "Available backups:"
-  if ls -1 "$BACKUP_DIR"/nutritional_info_backup_*.sql.gz &>/dev/null; then
-    ls -1 "$BACKUP_DIR"/nutritional_info_backup_*.sql.gz | \
-      sed 's/.*nutritional_info_backup_\(.*\)\.sql\.gz/  \1/' | \
-      sort -r
+  local backups
+  backups=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | \
+      xargs -0 -n1 basename | \
+      sed 's/nutritional_info_backup_\(.*\)\.sql\.gz/  \1/' | \
+    sort -r)
+  if [[ -n "$backups" ]]; then
+    echo "$backups"
   else
     echo "  No backups found in $BACKUP_DIR"
   fi
@@ -159,24 +162,24 @@ trigger_job() {
   print_separator "="
   echo -e "${CYAN}🚀 Triggering Kubernetes restore job...${NC}"
   print_separator "-"
-  
+
   echo "📋 Job configuration: $YAML_PATH"
-  
+
   # Delete existing job if it exists
   echo "Cleaning up any existing job..."
   kubectl delete job "$JOB_NAME" -n "$NAMESPACE" --ignore-not-found=true
-  
+
   # Wait a moment for cleanup
   sleep 2
-  
+
   # Export environment variables for envsubst
   export BACKUP_DATE
   export RESTORE_OPTIONS
-  
+
   # Apply the job YAML with environment variable substitution
   echo "Starting job: $JOB_NAME"
   envsubst < "$YAML_PATH" | kubectl apply -f -
-  
+
   # Wait for pod to be created
   echo "Waiting for pod to be ready..."
   if kubectl wait --for=condition=ready pod -l job-name="$JOB_NAME" -n "$NAMESPACE" --timeout=120s; then
@@ -193,7 +196,7 @@ monitor_job() {
   print_separator "="
   echo -e "${CYAN}⏳ Monitoring job progress...${NC}"
   print_separator "-"
-  
+
   # Get the pod name for the job
   local pod_name
   echo "Finding job pod..."
@@ -206,20 +209,20 @@ monitor_job() {
     echo "Waiting for pod to appear... (attempt $i/30)"
     sleep 2
   done
-  
+
   if [[ -z "$pod_name" ]]; then
     echo -e "${RED}❌ Could not find job pod after 60 seconds${NC}"
     return 1
   fi
-  
+
   # Follow the logs
   echo "📋 Following job logs (Ctrl+C to stop watching, job will continue):"
   print_separator "-"
-  
+
   # Follow logs with timeout protection
   kubectl logs -f "$pod_name" -n "$NAMESPACE" &
   local logs_pid=$!
-  
+
   # Wait for job completion or user interrupt
   echo ""
   echo -e "${CYAN}⏳ Waiting for job completion...${NC}"
@@ -231,12 +234,12 @@ monitor_job() {
     echo ""
     print_separator "-"
     echo -e "${YELLOW}⚠️ Job did not complete within timeout or failed${NC}"
-    
+
     # Check job status
     local job_status
     job_status=$(kubectl get job "$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "Unknown")
     echo "Job status: $job_status"
-    
+
     if [[ "$job_status" == "Failed" ]]; then
       echo -e "${RED}❌ Job failed - check logs above for details${NC}"
       # Kill the logs process
@@ -244,7 +247,7 @@ monitor_job() {
       return 1
     fi
   fi
-  
+
   # Kill the logs process if still running
   kill $logs_pid 2>/dev/null || true
   wait $logs_pid 2>/dev/null || true
@@ -252,22 +255,24 @@ monitor_job() {
 
 # Main execution
 main() {
-  local start_time=$(date +%s)
-  
+  local start_time
+  start_time=$(date +%s)
+
   print_separator "="
   echo -e "${CYAN}🚀 Starting nutritional data restore process...${NC}"
   print_separator "-"
   echo "Started at: $(date)"
-  
+
   # Trigger the Kubernetes job
   trigger_job
-  
+
   # Monitor job progress
   monitor_job
-  
-  local end_time=$(date +%s)
+
+  local end_time
+  end_time=$(date +%s)
   local duration=$((end_time - start_time))
-  
+
   print_separator "="
   echo -e "${GREEN}✅ Nutritional data restore process completed!${NC}"
   echo "    Total time:  ${duration}s"

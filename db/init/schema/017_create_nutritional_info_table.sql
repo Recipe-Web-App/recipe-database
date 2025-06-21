@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS nutritional_info (
   sugars_100g DECIMAL(8, 3),
   added_sugars_100g DECIMAL(8, 3),
 
-  -- Fats  
+  -- Fats
   fat_100g DECIMAL(8, 3),
   saturated_fat_100g DECIMAL(8, 3),
   monounsaturated_fat_100g DECIMAL(8, 3),

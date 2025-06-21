@@ -26,8 +26,8 @@ print_separator "-"
 
 # Load environment variables if .env exists
 if [ -f .env ]; then
-  # shellcheck disable=SC1091
   set -o allexport
+  # shellcheck disable=SC1091
   source .env
   set +o allexport
   echo -e "${GREEN}✅ Environment variables loaded.${NC}"
@@ -67,19 +67,19 @@ print_separator "-"
 kubectl exec -n recipe-database "$POD_NAME" -- \
   bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -c \"
     SET search_path TO $POSTGRES_SCHEMA;
-    SELECT 
+    SELECT
       'Total Rows: ' || COUNT(*) as stat
     FROM nutritional_info
     UNION ALL
-    SELECT 
+    SELECT
       'Table Size: ' || pg_size_pretty(pg_total_relation_size('$POSTGRES_SCHEMA.nutritional_info'))
     UNION ALL
-    SELECT 
+    SELECT
       'Data Size: ' || pg_size_pretty(pg_relation_size('$POSTGRES_SCHEMA.nutritional_info'))
     UNION ALL
-    SELECT 
+    SELECT
       'Index Size: ' || pg_size_pretty(pg_total_relation_size('$POSTGRES_SCHEMA.nutritional_info') - pg_relation_size('$POSTGRES_SCHEMA.nutritional_info'));
-  \"" | while read -r line; do
+\"" | while read -r line; do
   echo -e "${CYAN}  $line${NC}"
 done
 
@@ -92,7 +92,7 @@ if kubectl exec -n recipe-database "$POD_NAME" -- \
     --schema='$POSTGRES_SCHEMA' \
     --table='$POSTGRES_SCHEMA.nutritional_info' \
     --data-only \
-    --column-inserts" > "$BACKUP_FILE"; then
+  --column-inserts" > "$BACKUP_FILE"; then
   echo -e "${GREEN}✅ Data backup completed successfully.${NC}"
 else
   echo -e "${RED}❌ Data backup failed.${NC}"
@@ -107,7 +107,7 @@ if kubectl exec -n recipe-database "$POD_NAME" -- \
   bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' \
     --schema='$POSTGRES_SCHEMA' \
     --table='$POSTGRES_SCHEMA.nutritional_info' \
-    --schema-only" > "$SCHEMA_FILE"; then
+  --schema-only" > "$SCHEMA_FILE"; then
   echo -e "${GREEN}✅ Schema export completed successfully.${NC}"
 else
   echo -e "${RED}❌ Schema export failed.${NC}"
@@ -135,13 +135,13 @@ echo -e "${CYAN}🧹 Cleaning up old files (keeping last 5)...${NC}"
 print_separator "-"
 
 # Clean up old data backups (keep 5 most recent)
-ls -t "$BACKUP_DIR"/nutritional_info_backup_*.sql.gz 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | sort -rz | tail -zn +6 | xargs -0 rm -f 2>/dev/null || true
 
-# Clean up old schema exports (keep 5 most recent)  
-ls -t "$EXPORT_DIR"/nutritional_info_schema_*.sql.gz 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+# Clean up old schema exports (keep 5 most recent)
+find "$EXPORT_DIR" -maxdepth 1 -name 'nutritional_info_schema_*.sql.gz' -print0 | sort -rz | tail -zn +6 | xargs -0 rm -f 2>/dev/null || true
 
-REMAINING_BACKUPS=$(ls -1 "$BACKUP_DIR"/nutritional_info_backup_*.sql.gz 2>/dev/null | wc -l)
-REMAINING_EXPORTS=$(ls -1 "$EXPORT_DIR"/nutritional_info_schema_*.sql.gz 2>/dev/null | wc -l)
+REMAINING_BACKUPS=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | grep -cz .)
+REMAINING_EXPORTS=$(find "$EXPORT_DIR" -maxdepth 1 -name 'nutritional_info_schema_*.sql.gz' -print0 | grep -cz .)
 echo -e "${CYAN}📁 Data backups remaining: $REMAINING_BACKUPS${NC}"
 echo -e "${CYAN}📁 Schema exports remaining: $REMAINING_EXPORTS${NC}"
 

@@ -29,16 +29,16 @@ install_dependencies() {
   print_separator "="
   echo "🐍 Installing Python dependencies..."
   print_separator "-"
-  
+
   local requirements_file="/app/python/requirements.txt"
   local venv_dir="/tmp/venv"
-  
+
   if [[ ! -f "$requirements_file" ]]; then
     echo "❌ Error: Requirements file not found: $requirements_file"
     print_separator "="
     exit 1
   fi
-  
+
   echo "Creating virtual environment at: $venv_dir"
   if python3 -m venv "$venv_dir"; then
     echo ""
@@ -49,7 +49,7 @@ install_dependencies() {
     print_separator "="
     exit 1
   fi
-  
+
   echo "Installing from: $requirements_file"
   if "$venv_dir/bin/pip" install --no-cache-dir -r "$requirements_file"; then
     echo ""
@@ -59,7 +59,7 @@ install_dependencies() {
     print_separator "="
     exit 1
   fi
-  
+
   # Export the virtual environment paths for the Python script
   export PATH="$venv_dir/bin:$PATH"
   export VIRTUAL_ENV="$venv_dir"
@@ -70,26 +70,27 @@ verify_data() {
   print_separator "="
   echo "📋 Verifying data directory and CSV file..."
   print_separator "-"
-  
+
   # Check if data directory exists
   if [[ ! -d "$DATA_MOUNT_DIR" ]]; then
     echo "❌ Error: Data directory not found: $DATA_MOUNT_DIR"
     print_separator "="
     exit 1
   fi
-  
+
   echo "✅ Data directory found: $DATA_MOUNT_DIR"
-  
+
   # Check if CSV file exists
   if [[ ! -f "$CSV_FILE" ]]; then
     echo "❌ Error: CSV file not found: $CSV_FILE"
     print_separator "="
     exit 1
   fi
-  
+
   # Get file information
-  local file_size=$(du -h "$CSV_FILE" | cut -f1)
-  
+  local file_size
+  file_size=$(du -h "$CSV_FILE" | cut -f1)
+
   echo "✅ CSV file found: $CSV_FILE"
   echo "    File size: $file_size"
 }
@@ -103,10 +104,10 @@ run_import() {
   # Build command arguments
   local python_args=()
   python_args+=("$CSV_FILE")
-  
+
   echo "Command: python3 $PYTHON_SCRIPT ${python_args[*]}"
   echo ""
-  
+
   # Run the Python script
   if python3 "$PYTHON_SCRIPT" "${python_args[@]}"; then
     print_separator "-"
@@ -121,25 +122,27 @@ run_import() {
 
 # Main execution
 main() {
-  local start_time=$(date +%s)
-  
+  local start_time
+  start_time=$(date +%s)
+
   print_separator "="
   echo "🚀 Starting OpenFoodFacts import process..."
   print_separator "-"
   echo "Started at: $(date)"
-  
+
   # Install Python dependencies
   install_dependencies
-  
+
   # Verify data directory and CSV file
   verify_data
-  
+
   # Run the import
   run_import
-  
-  local end_time=$(date +%s)
+
+  local end_time
+  end_time=$(date +%s)
   local duration=$((end_time - start_time))
-  
+
   print_separator "="
   echo "🎉 OpenFoodFacts import job completed!"
   echo "    Total time: ${duration}s"

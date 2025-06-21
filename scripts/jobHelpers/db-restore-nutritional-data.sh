@@ -54,7 +54,7 @@ print_separator "-"
 # Function to get latest backup if not specified
 get_latest_backup() {
   local latest_backup
-  latest_backup=$(ls -t /app/db/data/backups/nutritional_info_backup_*.sql.gz 2>/dev/null | head -n 1)
+  latest_backup=$(find /app/db/data/backups/ -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -n 1)
   if [ -n "$latest_backup" ]; then
     basename "$latest_backup" | sed 's/nutritional_info_backup_\(.*\)\.sql\.gz/\1/'
   else
@@ -100,9 +100,9 @@ print_separator "-"
 execute_sql() {
   local sql="$1"
   local description="$2"
-  
+
   echo -e "${CYAN}🔧 $description...${NC}"
-  
+
   if PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
     -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -c "$sql" > /dev/null; then
     echo -e "${GREEN}✅ $description completed${NC}"
@@ -116,14 +116,14 @@ execute_sql() {
 check_table_exists() {
   local exists
   exists=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
-    -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
+      -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
       SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = '$POSTGRES_SCHEMA' 
+        SELECT FROM information_schema.tables
+        WHERE table_schema = '$POSTGRES_SCHEMA'
         AND table_name = 'nutritional_info'
       );
-    " 2>/dev/null | tr -d ' \n\t')
-  
+  " 2>/dev/null | tr -d ' \n\t')
+
   if [ "$exists" = "t" ]; then
     return 0
   else
@@ -137,9 +137,9 @@ restore_file_with_progress() {
   local description="$2"
   local ignore_errors="${3:-false}"
   local show_progress="${4:-false}"
-  
+
   echo -e "${CYAN}📤 $description...${NC}"
-  
+
   if [ "$show_progress" = "true" ]; then
     # Start restore in background
     if [ "$ignore_errors" = "true" ]; then
@@ -149,42 +149,43 @@ restore_file_with_progress() {
       gunzip -c "$file" | PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
         -U "$DB_MAINT_USER" -d "$POSTGRES_DB" > /dev/null &
     fi
-    
+
     local restore_pid=$!
-    local start_time=$(date +%s)
-    
+    local start_time
+    start_time=$(date +%s)
+
     echo -e "${CYAN}🔄 Monitoring restore progress...${NC}"
-    
+
     # Monitor progress
     while kill -0 $restore_pid 2>/dev/null; do
       local current_rows
       current_rows=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
-        -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
+          -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
           SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-        " 2>/dev/null | tr -d ' \n\t' || echo "0")
-      
+      " 2>/dev/null | tr -d ' \n\t' || echo "0")
+
       local elapsed=$(($(date +%s) - start_time))
       local mins=$((elapsed / 60))
       local secs=$((elapsed % 60))
-      
+
       printf "${CYAN}📊 Rows restored: %s | Time elapsed: %02d:%02d${NC}\n" "$current_rows" "$mins" "$secs"
       sleep 5
     done
-    
+
     wait $restore_pid
     local exit_code=$?
-    
+
     if [ $exit_code -eq 0 ]; then
       local final_rows
       final_rows=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
-        -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
+          -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
           SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-        " 2>/dev/null | tr -d ' \n\t')
-      
+      " 2>/dev/null | tr -d ' \n\t')
+
       local total_time=$(($(date +%s) - start_time))
       local total_mins=$((total_time / 60))
       local total_secs=$((total_time % 60))
-      
+
       echo -e "${GREEN}✅ $description completed${NC}"
       echo -e "${CYAN}📊 Final row count: $final_rows${NC}"
       echo -e "${CYAN}⏱️  Total time: ${total_mins}m ${total_secs}s${NC}"
@@ -198,15 +199,15 @@ restore_file_with_progress() {
       local error_output
       error_output=$(gunzip -c "$file" | PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
         -U "$DB_MAINT_USER" -d "$POSTGRES_DB" 2>&1)
-      
+
       local filtered_errors
       filtered_errors=$(echo "$error_output" | grep -v "already exists" | grep -v "must be owner" | grep -v "no privileges were granted" || true)
-      
+
       if [ -n "$filtered_errors" ]; then
         echo -e "${YELLOW}⚠️ Some schema restore issues (non-critical):${NC}"
         echo "$filtered_errors" | head -5
       fi
-      
+
       echo -e "${GREEN}✅ $description completed (with expected warnings)${NC}"
     else
       if gunzip -c "$file" | PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
@@ -231,11 +232,11 @@ execute_sql "SET search_path TO $POSTGRES_SCHEMA;" "Setting search path"
 if PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
   -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
     SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-  " 2>/dev/null | tr -d ' \n\t'; then
+" 2>/dev/null | tr -d ' \n\t'; then
   ROWS_BEFORE=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
-    -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
+      -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
       SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-    " 2>/dev/null | tr -d ' \n\t')
+  " 2>/dev/null | tr -d ' \n\t')
   echo -e "${CYAN}📊 Current rows in table: $ROWS_BEFORE${NC}"
 else
   ROWS_BEFORE="N/A (table may not exist)"
@@ -275,23 +276,23 @@ print_separator "-"
 
 PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
   -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -c "
-    SELECT 
+    SELECT
       'Final Rows: ' || COUNT(*) as stat
     FROM $POSTGRES_SCHEMA.nutritional_info
     UNION ALL
-    SELECT 
+    SELECT
       'Table Size: ' || pg_size_pretty(pg_total_relation_size('$POSTGRES_SCHEMA.nutritional_info'))
     UNION ALL
-    SELECT 
+    SELECT
       'Data Size: ' || pg_size_pretty(pg_relation_size('$POSTGRES_SCHEMA.nutritional_info'));
-  " | while read -r line; do
+" | while read -r line; do
   echo -e "${CYAN}  $line${NC}"
 done
 
 ROWS_AFTER=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
-  -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
+    -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
     SELECT COUNT(*) FROM $POSTGRES_SCHEMA.nutritional_info;
-  " 2>/dev/null | tr -d ' \n\t')
+" 2>/dev/null | tr -d ' \n\t')
 
 # Calculate total elapsed time
 SCRIPT_END_TIME=$(date +%s)

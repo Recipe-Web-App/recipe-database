@@ -31,7 +31,7 @@ repos:
         files: ^(docker-compose\.ya?ml|compose\.ya?ml)$
 
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 3.4.0
+    rev: 3.4.1
     hooks:
       - id: sqlfluff-fix
         args: [ "--dialect=postgres" ]
@@ -39,3 +39,31 @@ repos:
       - id: sqlfluff-lint
         args: [ "--dialect=postgres" ]
         files: \.sql$
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        files: ^python/.*\.py$
+        args: ["--line-length=88"]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: ^python/.*\.py$
+        args: ["--profile", "black", "--line-length=88"]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        files: ^python/.*\.py$
+        args: ["--max-line-length=88", "--extend-ignore=E203,W503"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
+    hooks:
+      - id: mypy
+        files: ^python/.*\.py$
+        args: ["--ignore-missing-imports", "--no-strict-optional"]
