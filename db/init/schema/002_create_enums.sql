@@ -66,3 +66,67 @@ DO $$ BEGIN CREATE TYPE recipe_manager.food_group_enum AS ENUM (
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
+
+-- Font size enum
+DO $$ BEGIN CREATE TYPE recipe_manager.font_size_enum AS ENUM (
+  'SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Color scheme enum
+DO $$ BEGIN CREATE TYPE recipe_manager.color_scheme_enum AS ENUM (
+  'LIGHT', 'DARK', 'AUTO', 'HIGH_CONTRAST'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Layout density enum
+DO $$ BEGIN CREATE TYPE recipe_manager.layout_density_enum AS ENUM (
+  'COMPACT', 'COMFORTABLE', 'SPACIOUS'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Profile visibility enum
+DO $$ BEGIN CREATE TYPE recipe_manager.profile_visibility_enum AS ENUM (
+  'PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Language enum
+DO $$ BEGIN CREATE TYPE recipe_manager.language_enum AS ENUM (
+  'EN', 'ES', 'FR', 'DE', 'IT', 'PT', 'ZH', 'JA', 'KO', 'RU'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Theme enum
+DO $$ BEGIN CREATE TYPE recipe_manager.theme_enum AS ENUM (
+  'LIGHT', 'DARK', 'AUTO', 'CUSTOM'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Volume level enum
+DO $$ BEGIN CREATE TYPE recipe_manager.volume_level_enum AS ENUM (
+  'MUTED', 'LOW', 'MEDIUM', 'HIGH'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Password strength enum
+DO $$ BEGIN CREATE TYPE recipe_manager.password_strength_enum AS ENUM (
+  'WEAK', 'MEDIUM', 'STRONG', 'VERY_STRONG'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
