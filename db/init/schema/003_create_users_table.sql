@@ -1,6 +1,7 @@
 -- db/init/schema/003_create_users_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.users (
   user_id UUID PRIMARY KEY,
+  role recipe_manager.USER_ROLE_ENUM NOT NULL DEFAULT 'USER',
   username VARCHAR(50) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
