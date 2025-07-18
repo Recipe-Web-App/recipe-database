@@ -45,6 +45,16 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: DB_MAINT_PASSWORD
+            - name: RECIPE_MANAGEMENT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: recipe-database-config
+                  key: RECIPE_MANAGEMENT_USER
+            - name: RECIPE_MANAGEMENT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipe-database-secret
+                  key: RECIPE_MANAGEMENT_PASSWORD
             - name: RECIPE_SCRAPER_USER
               valueFrom:
                 configMapKeyRef:
