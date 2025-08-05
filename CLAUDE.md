@@ -36,6 +36,23 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 
 ## Development Commands
 
+### Quick Start Workflow
+
+```bash
+# 1. Deploy the main database container
+./scripts/containerManagement/deploy-container.sh
+
+# 2. Load database schema
+./scripts/dbManagement/load-schema.sh
+
+# 3. Load test data (optional but recommended for development)
+./scripts/dbManagement/load-test-fixtures.sh
+
+# 4. Setup monitoring (optional)
+./scripts/dbManagement/setup-monitoring-user.sh
+./scripts/containerManagement/deploy-supporting-services.sh
+```
+
 ### Database Schema Management
 
 ```bash
@@ -45,8 +62,14 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 # Load test fixtures
 ./scripts/dbManagement/load-test-fixtures.sh
 
-# Import nutritional data
+# Import nutritional data from OpenFoodFacts CSV
 ./scripts/dbManagement/import-nutritional-data.sh
+
+# Connect directly to database
+./scripts/dbManagement/db-connect.sh
+
+# Export schema for backups
+./scripts/dbManagement/export-schema.sh
 
 # Setup monitoring user for postgres_exporter
 ./scripts/dbManagement/setup-monitoring-user.sh
@@ -86,7 +109,13 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 # Install Python dependencies
 cd python && pip install -r requirements.txt
 
-# Code formatting and linting
+# Import nutritional data directly with Python
+python3 python/nutritional_data_importer/nutritional_data_importer.py \
+  --csv-file /path/to/openfoodfacts.csv \
+  --batch-size 1000 \
+  --verbose
+
+# Code formatting and linting (run these before committing)
 black nutritional_data_importer/
 isort nutritional_data_importer/
 flake8 nutritional_data_importer/
@@ -144,12 +173,34 @@ When modifying the database schema:
 
 ## Development Environment
 
+### Prerequisites
+
 The system expects:
 
-- Kubernetes cluster access for database operations
-- PostgreSQL client tools for direct database access
-- Python 3.x for nutritional data processing
-- Proper kubectl configuration for the `recipe-database` namespace
+- **Kubernetes cluster**: minikube for local development
+- **kubectl**: configured for your cluster
+- **Docker**: for container building
+- **PostgreSQL client tools**: psql for direct database access
+- **Python 3.8+**: for nutritional data processing
+- **jq**: for JSON processing in scripts
+- **envsubst**: for template processing
+
+### Environment Setup
+
+1. Copy and customize environment variables:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+2. Ensure kubectl is configured for the `recipe-database` namespace
+
+3. For Minikube users, the deploy script will automatically:
+   - Start Minikube if not running
+   - Enable ingress addon
+   - Set up Docker environment
+   - Mount local directory for persistent data
 
 ## Monitoring and Observability
 
@@ -183,3 +234,39 @@ Grafana:
 - Database health and diagnostic information
 
 See `monitoring/README.md` for detailed setup instructions and troubleshooting.
+
+## Troubleshooting and Operations
+
+### Common Operations
+
+```bash
+# Check system health
+./scripts/containerManagement/get-container-status.sh
+./scripts/containerManagement/get-supporting-services-status.sh
+
+# View logs
+kubectl logs -n recipe-database deployment/recipe-database -c recipe-database --tail=100
+
+# Port forward for external access
+kubectl port-forward -n recipe-database svc/recipe-database-service 5432:5432
+
+# Access metrics endpoint
+kubectl port-forward -n recipe-database svc/recipe-database-service 9187:9187
+curl http://localhost:9187/metrics
+```
+
+### Key Documentation
+
+- `docs/setup.md` - Detailed installation instructions
+- `docs/operations.md` - Day-to-day management procedures
+- `docs/troubleshooting.md` - Common issues and solutions
+- `monitoring/README.md` - Comprehensive monitoring setup
+
+### Database Access Patterns
+
+- **Namespace**: All resources are in `recipe-database` namespace
+- **Service Name**: `recipe-database-service`
+- **Database Port**: 5432 (PostgreSQL)
+- **Metrics Port**: 9187 (postgres_exporter)
+- **Schema**: All tables use the `recipe_manager` schema
+- **Main Database**: Specified by `POSTGRES_DB` environment variable
