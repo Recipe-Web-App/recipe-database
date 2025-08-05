@@ -1,0 +1,435 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Pre-commit and code quality checks
+  pre-commit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key:
+            pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml')
+            }}
+
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
+
+  # Python code quality and testing
+  python-quality:
+    name: Python Quality & Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key:
+            pip-${{ runner.os }}-${{ matrix.python-version }}-${{
+            hashFiles('python/requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          cd python
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-mock bandit safety
+
+      - name: Run security scan with bandit
+        run: |
+          cd python
+          bandit -r nutritional_data_importer/ -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: Check for known security vulnerabilities
+        run: |
+          cd python
+          safety check --json --output safety-report.json
+        continue-on-error: true
+
+      - name: Run tests with pytest
+        run: |
+          cd python
+          pytest --cov=nutritional_data_importer --cov-report=xml --cov-report=html
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: python/coverage.xml
+          flags: python
+          name: python-${{ matrix.python-version }}
+
+  # SQL quality checks
+  sql-quality:
+    name: SQL Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python for SQLFluff
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install SQLFluff
+        run: pip install sqlfluff
+
+      - name: Run SQLFluff linting
+        run: |
+          sqlfluff lint db/init/schema/ --dialect postgres --format github-annotation-native
+          sqlfluff lint db/init/functions/ --dialect postgres --format github-annotation-native
+          sqlfluff lint db/init/views/ --dialect postgres --format github-annotation-native
+
+      - name: Check SQL formatting
+        run: |
+          sqlfluff format db/init/schema/ --dialect postgres --diff
+          sqlfluff format db/init/functions/ --dialect postgres --diff
+          sqlfluff format db/init/views/ --dialect postgres --diff
+
+  # Shell script quality checks
+  shellcheck:
+    name: Shell Script Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "./scripts"
+          format: gcc
+          severity: warning
+
+  # Kubernetes manifest validation
+  k8s-validation:
+    name: Kubernetes Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin
+
+      - name: Validate Kubernetes manifests
+        run: |
+          kubeval k8s/*.yaml
+
+      - name: Set up kubesec
+        run: |
+          wget https://github.com/controlplaneio/kubesec/releases/latest/download/kubesec_linux_amd64.tar.gz
+          tar -xzf kubesec_linux_amd64.tar.gz
+          sudo mv kubesec /usr/local/bin
+
+      - name: Security scan Kubernetes manifests
+        run: |
+          find k8s/ -name "*.yaml" -exec kubesec scan {} \;
+
+  # Docker image build and security scan
+  docker-build:
+    name: Docker Build & Security Scan
+    runs-on: ubuntu-latest
+    needs: [pre-commit, python-quality, sql-quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  # Documentation checks
+  docs-check:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js for markdown tools
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install markdown tools
+        run: |
+          npm install -g markdownlint-cli markdown-link-check
+
+      - name: Lint Markdown files
+        run: |
+          markdownlint . --ignore node_modules --ignore .git
+
+      - name: Check markdown links
+        run: |
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | xargs markdown-link-check --config .github/markdown-link-check.json
+        continue-on-error: true
+
+      - name: Check for broken internal links
+        run: |
+          # Check for relative links that might be broken
+          grep -r "](docs/" . --include="*.md" || echo "No relative docs links found"
+          grep -r "](monitoring/" . --include="*.md" || echo "No relative monitoring links found"
+
+  # Security scanning
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    needs: [pre-commit]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: Run Semgrep security scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit p/secrets p/docker p/kubernetes
+
+  # Integration tests (if database is available)
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [python-quality, sql-quality]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:15.4
+        env:
+          POSTGRES_PASSWORD: test_password # pragma: allowlist secret
+          POSTGRES_DB: recipe_test
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          cd python
+          pip install -r requirements.txt
+          pip install pytest psycopg2-binary
+
+      - name: Load database schema
+        run: | # pragma: allowlist secret
+          export PGPASSWORD=test_password
+          for file in db/init/schema/*.sql; do
+            psql -h localhost -U postgres -d recipe_test -f "$file"
+          done
+
+      - name: Load database functions
+        run: | # pragma: allowlist secret
+          export PGPASSWORD=test_password
+          for file in db/init/functions/*.sql; do
+            psql -h localhost -U postgres -d recipe_test -f "$file"
+          done
+
+      - name: Run integration tests
+        run: |
+          cd python
+          pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/recipe_test # pragma: allowlist secret
+
+  # Performance tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:15.4
+        env:
+          POSTGRES_PASSWORD: test_password # pragma: allowlist secret
+          POSTGRES_DB: recipe_test
+          POSTGRES_SHARED_BUFFERS: 256MB
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install performance testing tools
+        run: |
+          cd python
+          pip install -r requirements.txt
+          pip install pytest-benchmark pgbench
+
+      - name: Load test schema and data
+        run: | # pragma: allowlist secret
+          export PGPASSWORD=test_password
+          # Load schema
+          for file in db/init/schema/*.sql; do
+            psql -h localhost -U postgres -d recipe_test -f "$file"
+          done
+          # Load test fixtures
+          for file in db/fixtures/*.sql; do
+            psql -h localhost -U postgres -d recipe_test -f "$file"
+          done
+
+      - name: Run performance benchmarks
+        run: |
+          cd python
+          pytest tests/performance/ --benchmark-only --benchmark-json=benchmark.json
+        continue-on-error: true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: python/benchmark.json
+
+  # Build and push Docker image (on main branch)
+  docker-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [docker-build, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deployment notification
+  notify-deployment:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [docker-push]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Notify successful deployment
+        run: |
+          echo "✅ Recipe Database successfully built and pushed!"
+          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "📝 Commit: ${{ github.sha }}"

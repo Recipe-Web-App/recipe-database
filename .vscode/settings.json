@@ -1,8 +1,6 @@
 {
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
-
-  // Python formatting and linting (matching pre-commit config)
   "[python]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "ms-python.black-formatter",
@@ -10,13 +8,9 @@
       "source.organizeImports.isort": "explicit"
     }
   },
-
-  // Shell script linting and formatting (matching pre-commit config)
   "[shellscript]": {
     "editor.formatOnSave": true
   },
-
-  // Python-specific settings
   "python.formatting.provider": "black",
   "python.formatting.blackArgs": ["--line-length=88"],
   "python.linting.enabled": true,
@@ -30,12 +24,7 @@
     "--ignore-missing-imports",
     "--no-strict-optional"
   ],
-  "isort.args": [
-    "--profile=black",
-    "--line-length=88"
-  ],
-
-  // Shell script linting settings (matching pre-commit config)
+  "isort.args": ["--profile=black", "--line-length=88"],
   "shellcheck.enable": true,
   "shellcheck.executablePath": "shellcheck",
   "shellcheck.exclude": [],
@@ -53,14 +42,10 @@
     "azcli",
     "bats"
   ],
-
-  // SQL formatting
   "sqltools.format": {
-    "keywordCase": "upper",     // SELECT instead of select
-    "identifierCase": "lower"   // table_name instead of TABLE_NAME
+    "keywordCase": "upper",
+    "identifierCase": "lower"
   },
-
-  // PostgreSQL connection (via SQLTools if using it)
   "sqltools.connections": [
     {
       "name": "Local PostgreSQL",
@@ -72,13 +57,9 @@
       "password": "${env:DB_MAINT_PASSWORD}"
     }
   ],
-
-  // Files to ignore
   "files.exclude": {
     "**/.DS_Store": true
   },
-
-  // Enable formatting on save for SQL files
   "[sql]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "dorzey.vscode-sqlfluff"
@@ -89,6 +70,7 @@
     "amandes",
     "ammoniumsulfit",
     "arachides",
+    "beautysh",
     "bœuf",
     "braunsenfsaat",
     "cashewkeme",
@@ -97,6 +79,7 @@
     "chunksize",
     "contenant",
     "coque",
+    "docstrings",
     "eier",
     "eieren",
     "eigelb",
@@ -105,6 +88,7 @@
     "envsubst",
     "erdnüsse",
     "fisch",
+    "fnpar",
     "frutta",
     "garnelen",
     "gelbsenfsaat",
@@ -118,6 +102,8 @@
     "hefe",
     "hoki",
     "hühnerei",
+    "isort",
+    "isready",
     "jajka",
     "kaliummetabisulfit",
     "keine",
@@ -139,11 +125,13 @@
     "mleko",
     "mléko",
     "moutarde",
+    "mypy",
     "natriummetabisulfit",
     "noix",
     "nüsse",
     "nutriscore",
     "openfoodfacts",
+    "OPENFOODS",
     "pescado",
     "pesce",
     "PGPASSWORD",
@@ -152,6 +140,7 @@
     "phenylalaninquelle",
     "pinda",
     "porc",
+    "prometheuscommunity",
     "psql",
     "schnittselerie",
     "schnittsellerie",
@@ -160,10 +149,12 @@
     "senf",
     "sésame",
     "sesamsaat",
+    "shellcheck",
     "soja",
     "sojabohnen",
     "sojaöl",
     "sojaprotein",
+    "sqlfluff",
     "sulfit",
     "Sulphites",
     "trigo",

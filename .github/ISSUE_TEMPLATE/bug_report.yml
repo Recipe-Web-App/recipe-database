@@ -1,0 +1,160 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us resolve the issue quickly.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please check the following before submitting a bug report
+      options:
+        - label:
+            I have searched for existing issues that might be related to this
+            bug
+          required: true
+        - label:
+            I have read the troubleshooting guide in
+            [docs/troubleshooting.md](../blob/main/docs/troubleshooting.md)
+          required: true
+        - label:
+            I am using a supported environment (see README.md for system
+            requirements)
+          required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe what went wrong...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Please provide detailed steps to reproduce the issue
+      placeholder: |
+        1. Deploy the database using '...'
+        2. Run the command '...'
+        3. Observe the error '...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear description of what you expected to happen
+      placeholder: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: What actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Information
+      description: Please provide details about your environment
+      value: |
+        - OS: [e.g. Ubuntu 20.04, macOS 13.0, Windows 11]
+        - Kubernetes version: [e.g. 1.28.0]
+        - PostgreSQL version: [e.g. 15.4]
+        - Docker version: [e.g. 24.0.0]
+        - Python version: [e.g. 3.11.0]
+        - Repository version/commit: [e.g. v1.0.0 or commit hash]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description:
+        Please paste any relevant log output. This will be automatically
+        formatted as code.
+      render: shell
+      placeholder: |
+        # Database logs
+        kubectl logs -n recipe-database deployment/recipe-database -c recipe-database
+
+        # Container status
+        kubectl describe pod -l app=recipe-database -n recipe-database
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description:
+        Please share relevant configuration (remove sensitive information)
+      render: yaml
+      placeholder: |
+        # Environment variables (remove sensitive values)
+        POSTGRES_USER=recipe_admin
+        POSTGRES_DB=recipe_database
+        # ... other relevant config
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Low - Minor inconvenience, workaround available
+        - Medium - Significant impact, no workaround
+        - High - Major functionality broken
+        - Critical - System unusable, data loss possible
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - Database Schema
+        - Container Deployment
+        - Monitoring (postgres_exporter)
+        - Python Data Processing
+        - Kubernetes Manifests
+        - Shell Scripts
+        - Documentation
+        - CI/CD Pipeline
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description:
+        Add any other context about the problem here (screenshots, related
+        issues, etc.)
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you like to contribute to fixing this bug?
+      options:
+        - label: I would like to work on fixing this bug
+          required: false

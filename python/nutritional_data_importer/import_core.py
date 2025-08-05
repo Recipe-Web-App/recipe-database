@@ -1,6 +1,9 @@
-"""
-Core import logic for OpenFoodFacts data.
-"""
+# Recipe Database - PostgreSQL database for recipe management
+# Copyright (c) 2024 Your Name <your.email@example.com>
+#
+# Licensed under the MIT License. See LICENSE file for details.
+
+"""Core import logic for OpenFoodFacts data."""
 
 import logging
 from pathlib import Path

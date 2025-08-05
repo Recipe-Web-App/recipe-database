@@ -7,7 +7,7 @@ set -euo pipefail
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
@@ -39,7 +39,7 @@ echo "KEEP_FILES: $KEEP_FILES"
 mkdir -p "$LOCAL_DATA_DIR"
 
 # Function to download OpenFoodFacts CSV
-download_csv() {
+function download_csv() {
   print_separator "="
   echo "📥 Downloading OpenFoodFacts CSV..."
   print_separator "-"
@@ -71,7 +71,7 @@ download_csv() {
 }
 
 # Function to trigger the Kubernetes job
-trigger_job() {
+function trigger_job() {
   print_separator "="
   echo "🚀 Triggering Kubernetes import job..."
   print_separator "-"
@@ -101,7 +101,7 @@ trigger_job() {
 }
 
 # Function to monitor job progress
-monitor_job() {
+function monitor_job() {
   print_separator "="
   echo "⏳ Monitoring job progress..."
   print_separator "-"
@@ -163,7 +163,7 @@ monitor_job() {
 }
 
 # Function to cleanup files
-cleanup() {
+function cleanup() {
   if [[ "$KEEP_FILES" != "true" ]]; then
     print_separator "="
     echo "🧹 Cleaning up downloaded files..."
@@ -182,7 +182,7 @@ cleanup() {
 }
 
 # Main execution
-main() {
+function main() {
   local start_time
   start_time=$(date +%s)
 

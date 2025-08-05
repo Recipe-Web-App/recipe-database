@@ -7,7 +7,7 @@ set -euo pipefail
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
@@ -25,7 +25,7 @@ echo "DATA_MOUNT_DIR: $DATA_MOUNT_DIR"
 echo "IMPORT_DATA_DIR: $IMPORT_DATA_DIR (env var)"
 
 # Function to install Python dependencies
-install_dependencies() {
+function install_dependencies() {
   print_separator "="
   echo "🐍 Installing Python dependencies..."
   print_separator "-"
@@ -66,7 +66,7 @@ install_dependencies() {
 }
 
 # Function to verify data directory and CSV file exist
-verify_data() {
+function verify_data() {
   print_separator "="
   echo "📋 Verifying data directory and CSV file..."
   print_separator "-"
@@ -96,7 +96,7 @@ verify_data() {
 }
 
 # Function to run the Python import script
-run_import() {
+function run_import() {
   print_separator "="
   echo "🐍 Running Python import script..."
   print_separator "-"
@@ -121,7 +121,7 @@ run_import() {
 }
 
 # Main execution
-main() {
+function main() {
   local start_time
   start_time=$(date +%s)
 

@@ -1,6 +1,9 @@
-"""
-Allergen mapping for OpenFoodFacts data import.
-"""
+# Recipe Database - PostgreSQL database for recipe management
+# Copyright (c) 2024 Your Name <your.email@example.com>
+#
+# Licensed under the MIT License. See LICENSE file for details.
+
+"""Allergen mapping for OpenFoodFacts data import."""
 
 import pandas as pd
 

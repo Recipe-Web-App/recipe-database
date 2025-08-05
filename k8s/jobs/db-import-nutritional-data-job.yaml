@@ -6,6 +6,9 @@ metadata:
   namespace: recipe-database
   labels:
     app: recipe-database
+  annotations:
+    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem
+    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (Python data processing)
 spec:
   template:
     spec:
@@ -14,6 +17,24 @@ spec:
         - name: db-import-nutritional-data
           image: recipe-database:latest
           imagePullPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+              ephemeral-storage: "1Gi"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+              ephemeral-storage: "2Gi"
           env:
             - name: POSTGRES_HOST
               valueFrom:
@@ -49,7 +70,12 @@ spec:
               mountPath: /app/python
             - name: scripts-volume
               mountPath: /app/scripts
-          command: ["bash", "-c", "/app/scripts/jobHelpers/db-import-nutritional-data.sh"]
+          command:
+            [
+              "bash",
+              "-c",
+              "/app/scripts/jobHelpers/db-import-nutritional-data.sh",
+            ]
       volumes:
         - name: data-volume
           hostPath:

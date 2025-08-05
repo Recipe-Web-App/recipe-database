@@ -1,15 +1,49 @@
-"""
-Database connection and operations for OpenFoodFacts data import.
-"""
+# Recipe Database - PostgreSQL database for recipe management
+# Copyright (c) 2024 Your Name <your.email@example.com>
+#
+# Licensed under the MIT License. See LICENSE file for details.
+
+"""Database connection and operations for OpenFoodFacts data import."""
 
 import logging
 import os
 
 import psycopg2
 from data_cleaning import clean_numeric_value
-from psycopg2.extras import execute_batch
+from sqlalchemy import MetaData, Table, create_engine, select, text, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 logger = logging.getLogger(__name__)
+
+# Global SQLAlchemy objects
+_engine = None
+_metadata = None
+_nutritional_info_table = None
+
+
+def get_sqlalchemy_engine():
+    """Get SQLAlchemy engine using environment variables."""
+    global _engine
+    if _engine is None:
+        database_url = (
+            f"postgresql://{os.getenv('DB_USERNAME')}:"
+            f"{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:"
+            f"{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME')}"
+        )
+        _engine = create_engine(database_url)
+    return _engine
+
+
+def get_nutritional_info_table():
+    """Get SQLAlchemy Table object for nutritional_info."""
+    global _metadata, _nutritional_info_table
+    if _nutritional_info_table is None:
+        engine = get_sqlalchemy_engine()
+        _metadata = MetaData()
+        _nutritional_info_table = Table(
+            "nutritional_info", _metadata, schema="recipe_manager", autoload_with=engine
+        )
+    return _nutritional_info_table
 
 
 def get_database_connection():
@@ -106,20 +140,38 @@ def get_table_columns():
 def insert_single_row(conn, target_columns, row_data, results):
     """Insert a single row (fallback for when database lookup fails)."""
     try:
-        with conn.cursor() as cursor:
-            # Build insert SQL
-            db_columns = [col.replace("-", "_") for col in target_columns]
-            placeholders = ", ".join(["%s"] * len(target_columns))
-            insert_sql = f"""
-                INSERT INTO nutritional_info ({', '.join(db_columns)})
-                VALUES ({placeholders})
-                ON CONFLICT (code) DO UPDATE SET
-                {', '.join([f'{col} = EXCLUDED.{col}' for col in db_columns[1:]])},
-                updated_at = now()
-            """
+        # Get SQLAlchemy table object
+        table = get_nutritional_info_table()
+        engine = get_sqlalchemy_engine()
 
-            cursor.execute(insert_sql, row_data)
-            if cursor.rowcount > 0:
+        # Sanitize column names and validate against table schema
+        db_columns = [col.replace("-", "_") for col in target_columns]
+        valid_columns = [col for col in db_columns if col in table.columns]
+
+        if len(valid_columns) != len(db_columns):
+            invalid_cols = set(db_columns) - set(table.columns.keys())
+            raise ValueError(f"Invalid column names: {invalid_cols}")
+
+        # Create data dictionary for the row
+        row_dict = dict(zip(valid_columns, row_data))
+
+        # Create PostgreSQL INSERT with ON CONFLICT using SQLAlchemy
+        stmt = pg_insert(table).values(row_dict)
+
+        # Build update dictionary for ON CONFLICT clause (exclude primary key)
+        update_dict = {
+            col.name: stmt.excluded[col.name]
+            for col in table.columns
+            if col.name in valid_columns and col.name != "code"
+        }
+        update_dict["updated_at"] = text("now()")
+
+        stmt = stmt.on_conflict_do_update(index_elements=["code"], set_=update_dict)
+
+        with engine.connect() as sqlalchemy_conn:
+            result = sqlalchemy_conn.execute(stmt)
+            sqlalchemy_conn.commit()
+            if result.rowcount > 0:
                 results["rows_imported"] += 1
 
     except Exception as e:
@@ -135,35 +187,47 @@ def insert_batch_data(conn, target_columns, batch_data):
     errors = []
 
     try:
-        # Prepare SQL for batch insert
-        # Use database column names (replace dashes with underscores for SQL)
+        # Get SQLAlchemy table object
+        table = get_nutritional_info_table()
+        engine = get_sqlalchemy_engine()
+
+        # Sanitize column names and validate against table schema
         db_columns = [col.replace("-", "_") for col in target_columns]
+        valid_columns = [col for col in db_columns if col in table.columns]
 
-        # Build INSERT statement with ON CONFLICT handling
-        columns_sql = ", ".join(db_columns)
+        if len(valid_columns) != len(db_columns):
+            invalid_cols = set(db_columns) - set(table.columns.keys())
+            raise ValueError(f"Invalid column names: {invalid_cols}")
 
-        # Create placeholders with special handling for allergens column
-        placeholders = []
-        for i, col in enumerate(db_columns):
-            if col == "allergens":
-                # Cast text array to enum array for allergens
-                placeholders.append("%s::recipe_manager.allergen_enum[]")
-            else:
-                placeholders.append("%s")
+        # Convert batch data to list of dictionaries
+        batch_dicts = []
+        for row_data in batch_data:
+            row_dict = dict(zip(valid_columns, row_data))
 
-        placeholders_sql = ", ".join(placeholders)
+            # Handle special case for allergens column (cast to enum array)
+            if "allergens" in row_dict and row_dict["allergens"]:
+                # SQLAlchemy will handle the type casting automatically
+                pass
 
-        insert_sql = f"""
-            INSERT INTO nutritional_info ({columns_sql})
-            VALUES ({placeholders_sql})
-            ON CONFLICT (code) DO UPDATE SET
-                {', '.join([f'{col} = EXCLUDED.{col}' for col in db_columns[1:]])},
-                updated_at = now()
-        """
+            batch_dicts.append(row_dict)
 
-        with conn.cursor() as cursor:
+        # Create PostgreSQL INSERT with ON CONFLICT using SQLAlchemy
+        stmt = pg_insert(table)
+
+        # Build update dictionary for ON CONFLICT clause (exclude primary key)
+        update_dict = {
+            col.name: stmt.excluded[col.name]
+            for col in table.columns
+            if col.name in valid_columns and col.name != "code"
+        }
+        update_dict["updated_at"] = text("now()")
+
+        stmt = stmt.on_conflict_do_update(index_elements=["code"], set_=update_dict)
+
+        with engine.connect() as sqlalchemy_conn:
             # Execute batch insert
-            execute_batch(cursor, insert_sql, batch_data, page_size=1000)
+            sqlalchemy_conn.execute(stmt, batch_dicts)
+            sqlalchemy_conn.commit()
             # For ON CONFLICT DO UPDATE, rowcount is not reliable
             # Count the actual rows processed instead
             imported = len(batch_data)
@@ -248,25 +312,25 @@ def insert_batch_data(conn, target_columns, batch_data):
         # Rollback the failed batch transaction
         conn.rollback()
 
-        # Try inserting each row individually
+        # Try inserting each row individually using insert_single_row
         success_count = 0
         fail_count = 0
+        individual_results = {"rows_imported": 0, "errors": []}
 
-        with conn.cursor() as cursor:
-            for row_idx, row_data in enumerate(batch_data):
-                try:
-                    cursor.execute(insert_sql, row_data)
-                    success_count += 1
-                except Exception as row_error:
-                    fail_count += 1
-                    if fail_count <= 5:  # Log first 5 individual failures
-                        product_code = row_data[0] if row_data else "unknown"
-                        logger.error(
-                            (
-                                f"     Row {row_idx + 1} (code: {product_code}) "
-                                f"failed: {row_error}"
-                            )
+        for row_idx, row_data in enumerate(batch_data):
+            try:
+                insert_single_row(conn, target_columns, row_data, individual_results)
+                success_count += 1
+            except Exception as row_error:
+                fail_count += 1
+                if fail_count <= 5:  # Log first 5 individual failures
+                    product_code = row_data[0] if row_data else "unknown"
+                    logger.error(
+                        (
+                            f"     Row {row_idx + 1} (code: {product_code}) "
+                            f"failed: {row_error}"
                         )
+                    )
 
         imported = success_count
         logger.error(
@@ -296,24 +360,24 @@ def batch_query_existing_products(conn, product_names):
         return {}
 
     try:
-        with conn.cursor() as cursor:
-            # Use IN clause for batch query
-            placeholders = ",".join(["%s"] * len(product_names))
-            cursor.execute(
-                f"""
-                SELECT * FROM nutritional_info
-                WHERE LOWER(TRIM(product_name)) IN ({placeholders})
-            """,
-                product_names,
+        # Get SQLAlchemy table object
+        table = get_nutritional_info_table()
+        engine = get_sqlalchemy_engine()
+
+        with engine.connect() as sqlalchemy_conn:
+            # Use SQLAlchemy for safe IN clause query
+            stmt = select(table).where(
+                text("LOWER(TRIM(product_name))").in_(
+                    [name.strip().lower() for name in product_names]
+                )
             )
 
-            # Get column names
-            db_columns = [desc[0] for desc in cursor.description]
+            result = sqlalchemy_conn.execute(stmt)
 
             # Build result dictionary
             existing_products = {}
-            for row in cursor.fetchall():
-                row_dict = dict(zip(db_columns, row))
+            for row in result:
+                row_dict = dict(row._mapping)
                 product_name_clean = row_dict["product_name"].strip().lower()
                 existing_products[product_name_clean] = row_dict
 
@@ -371,15 +435,37 @@ def update_existing_product_batch(conn, original_row, merged_row, target_columns
 
         # Execute update if we have changes
         if update_fields:
-            update_values.append(original_row["nutritional_info_id"])
+            # Get SQLAlchemy table object
+            table = get_nutritional_info_table()
+            engine = get_sqlalchemy_engine()
 
-            with conn.cursor() as cursor:
-                update_sql = f"""
-                    UPDATE nutritional_info
-                    SET {', '.join(update_fields)}, updated_at = now()
-                    WHERE nutritional_info_id = %s
-                """
-                cursor.execute(update_sql, update_values)
+            # Build update dictionary from changed fields
+            update_dict = {}
+            value_index = 0
+            for field_expr in update_fields:
+                if " = " in field_expr:
+                    field_name = field_expr.split(" = ")[0]
+                    if "::" in field_expr:
+                        # Handle special cast syntax (like allergens)
+                        field_name = field_name.strip()
+                    update_dict[field_name] = update_values[value_index]
+                    value_index += 1
+
+            # Add updated_at timestamp
+            update_dict["updated_at"] = text("now()")
+
+            with engine.connect() as sqlalchemy_conn:
+                stmt = (
+                    update(table)
+                    .where(
+                        table.c.nutritional_info_id
+                        == original_row["nutritional_info_id"]
+                    )
+                    .values(update_dict)
+                )
+
+                sqlalchemy_conn.execute(stmt)
+                sqlalchemy_conn.commit()
 
     except Exception as e:
         # CHANGED: Report errors to console immediately

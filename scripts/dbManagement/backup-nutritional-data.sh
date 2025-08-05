@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"

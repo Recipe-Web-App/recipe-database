@@ -4,6 +4,9 @@ kind: Deployment
 metadata:
   name: recipe-database
   namespace: recipe-database
+  annotations:
+    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem
+    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (PostgreSQL requirements)
 spec:
   replicas: 1
   selector:
@@ -18,6 +21,15 @@ spec:
         - name: recipe-database
           image: recipe-database:latest
           imagePullPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 5432
           env:
@@ -53,10 +65,80 @@ spec:
             requests:
               memory: "256Mi"
               cpu: "250m"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "512Mi"
               cpu: "500m"
+              ephemeral-storage: "2Gi"
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - postgres
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+        - name: postgres-exporter
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10002
+            runAsGroup: 10002
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: recipe-database-secret
+                  key: POSTGRES_EXPORTER_DATA_SOURCE_NAME
+            - name: PG_EXPORTER_EXTEND_QUERY_PATH
+              value: "/etc/postgres_exporter/queries.yaml"
+          volumeMounts:
+            - mountPath: /etc/postgres_exporter
+              name: postgres-exporter-config
+              readOnly: true
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+              ephemeral-storage: "100Mi"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+              ephemeral-storage: "200Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9187
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9187
+            initialDelaySeconds: 10
+            periodSeconds: 15
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: recipe-database-pvc
+        - name: postgres-exporter-config
+          configMap:
+            name: postgres-exporter-config

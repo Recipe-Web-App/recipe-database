@@ -7,7 +7,7 @@ export PGPASSWORD="$DB_MAINT_PASSWORD"
 
 FIXTURES_DIR="/app/sql/fixtures"
 
-print_separator() {
+function print_separator() {
   printf '%*s\n' "${COLUMNS:-80}" '' | tr ' ' '='
 }
 

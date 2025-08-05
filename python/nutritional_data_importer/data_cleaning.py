@@ -1,6 +1,9 @@
-"""
-Data cleaning utilities for OpenFoodFacts data import.
-"""
+# Recipe Database - PostgreSQL database for recipe management
+# Copyright (c) 2024 Your Name <your.email@example.com>
+#
+# Licensed under the MIT License. See LICENSE file for details.
+
+"""Data cleaning utilities for OpenFoodFacts data import."""
 
 import logging
 import re
@@ -11,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def parse_serving_size(serving_size_str):
-    """
-    Parse a free-text serving size string to extract quantity and standardized unit.
+    """Parse a free-text serving size string to extract quantity and standardized unit.
+
     Prioritizes weight/volume in parentheses over serving descriptions.
 
     Args:
@@ -99,13 +102,11 @@ def parse_serving_size(serving_size_str):
 
     # Special cases for common serving descriptions
     if not unit:
-        if any(word in s for word in ["cookie", "cracker", "whole"]):
+        if any(word in s for word in ["cookie", "cracker", "whole"]) or any(
+            word in s for word in ["stick", "bar"]
+        ):
             unit = "PIECE"
-        elif any(word in s for word in ["stick", "bar"]):
-            unit = "PIECE"
-        elif any(word in s for word in ["serving", "portion"]):
-            unit = "UNIT"
-        elif s and quantity:  # Has text and quantity but no recognized unit
+        elif any(word in s for word in ["serving", "portion"]) or (s and quantity):
             unit = "UNIT"
 
     # If we found a unit but no quantity, default to 1.0
@@ -116,9 +117,9 @@ def parse_serving_size(serving_size_str):
 
 
 def clean_numeric_value(value, column_name=None):
-    """
-    Clean and convert a value to a numeric type, handling various formats and
-    database precision limits.
+    """Clean and convert a value to a numeric type.
+
+    Handles various formats and database precision limits.
     """
     if pd.isna(value) or value == "" or value is None:
         return None

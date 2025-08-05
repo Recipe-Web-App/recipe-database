@@ -1,0 +1,46 @@
+# CODEOWNERS file
+# This file defines individuals or teams that are responsible for code in this repository.
+# Order is important; the last matching pattern takes the most precedence.
+
+# Global fallback - repository owner reviews everything by default
+* @your-username
+
+# Database schema and SQL files
+/db/ @your-username
+*.sql @your-username
+
+# Kubernetes manifests and deployment
+/k8s/ @your-username
+
+# Scripts and automation
+/scripts/ @your-username
+
+# Python code
+/python/ @your-username
+
+# Documentation
+*.md @your-username
+/docs/ @your-username
+
+# CI/CD and GitHub workflows
+/.github/ @your-username
+.pre-commit-config.yaml @your-username
+
+# Configuration files
+*.yaml @your-username
+*.yml @your-username
+*.json @your-username
+*.toml @your-username
+
+# Security-sensitive files (require additional review)
+.secrets.baseline @your-username
+SECURITY.md @your-username
+/.github/workflows/security.yml @your-username
+
+# Release and versioning
+CHANGELOG.md @your-username
+/.github/workflows/release.yml @your-username
+
+# Monitoring configuration
+/monitoring/ @your-username
+/grafana/ @your-username

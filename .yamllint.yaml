@@ -1,0 +1,53 @@
+---
+extends: default
+
+rules:
+  # Allow longer lines for readability
+  line-length:
+    max: 120
+    level: warning
+
+  # Allow multiple spaces for alignment in YAML
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  # Be more lenient with comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Allow empty values in YAML (common in Kubernetes)
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+  # Allow truthy values (common in GitHub Actions and Kubernetes)
+  truthy:
+    allowed-values: ["true", "false", "on", "off", "yes", "no"]
+    check-keys: false
+
+  # Allow some bracket spacing for readability
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Allow trailing commas in flow sequences
+  commas:
+    max-spaces-before: 0
+    min-spaces-after: 1
+    max-spaces-after: 1
+
+  # Allow document start marker
+  document-start:
+    present: false
+
+  # Allow multiple documents in one file (common for Kubernetes)
+  document-end:
+    present: false
+
+ignore: |
+  *.patch
+  .secrets.baseline
+  node_modules/
+  venv/
+  .git/

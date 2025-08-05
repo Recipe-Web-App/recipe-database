@@ -9,7 +9,7 @@ export PGPASSWORD="$POSTGRES_PASSWORD"
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
@@ -20,7 +20,7 @@ echo "POSTGRES_HOST: $POSTGRES_HOST"
 echo "POSTGRES_DB:   $POSTGRES_DB"
 echo "POSTGRES_USER: $POSTGRES_USER"
 
-execute_sql_files() {
+function execute_sql_files() {
   local dir=$1
   local label=$2
   local status=0

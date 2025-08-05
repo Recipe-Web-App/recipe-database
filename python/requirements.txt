@@ -3,6 +3,7 @@ pandas>=2.0.0
 
 # Database connectivity
 psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
 
 # Development tools (linting and formatting)
 black>=24.3.0

@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
@@ -34,7 +34,7 @@ BACKUP_DATE=""
 RESTORE_OPTIONS=""
 
 # Function to get latest backup date
-get_latest_backup() {
+function get_latest_backup() {
   local latest_backup
   latest_backup=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -n 1)
   if [ -n "$latest_backup" ]; then
@@ -45,7 +45,7 @@ get_latest_backup() {
 }
 
 # Function to show usage
-show_usage() {
+function show_usage() {
   echo "Usage: $0 [OPTIONS] [backup_date]"
   echo ""
   echo "Options:"
@@ -158,7 +158,7 @@ else
 fi
 
 # Function to trigger the Kubernetes job
-trigger_job() {
+function trigger_job() {
   print_separator "="
   echo -e "${CYAN}🚀 Triggering Kubernetes restore job...${NC}"
   print_separator "-"
@@ -192,7 +192,7 @@ trigger_job() {
 }
 
 # Function to monitor job progress
-monitor_job() {
+function monitor_job() {
   print_separator "="
   echo -e "${CYAN}⏳ Monitoring job progress...${NC}"
   print_separator "-"
@@ -254,7 +254,7 @@ monitor_job() {
 }
 
 # Main execution
-main() {
+function main() {
   local start_time
   start_time=$(date +%s)
 

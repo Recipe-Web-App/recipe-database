@@ -1,7 +1,98 @@
----
 version: 2
 updates:
-  - package-ecosystem: "docker"
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "your-username"
+    assignees:
+      - "your-username"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+
+  # Docker dependencies in Kubernetes manifests
+  - package-ecosystem: "docker"
+    directory: "/k8s"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "your-username"
+    assignees:
+      - "your-username"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    ignore:
+      # Ignore major version updates for PostgreSQL to avoid breaking changes
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "quay.io/prometheuscommunity/postgres-exporter"
+        update-types: ["version-update:semver-major"]
+
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/python"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "your-username"
+    assignees:
+      - "your-username"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+      - "automated"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignore major version updates for critical packages
+      - dependency-name: "psycopg2*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pandas"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
+
+  # Pre-commit hooks
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "your-username"
+    assignees:
+      - "your-username"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "pre-commit"
+      - "automated"
