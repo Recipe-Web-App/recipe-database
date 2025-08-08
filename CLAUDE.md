@@ -39,7 +39,7 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 ### Quick Start Workflow
 
 ```bash
-# 1. Deploy the main database container
+# 1. Deploy the main database container (PostgreSQL only)
 ./scripts/containerManagement/deploy-container.sh
 
 # 2. Load database schema
@@ -48,7 +48,7 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 # 3. Load test data (optional but recommended for development)
 ./scripts/dbManagement/load-test-fixtures.sh
 
-# 4. Setup monitoring (optional)
+# 4. Setup monitoring (optional - requires steps 1-3 to be complete)
 ./scripts/dbManagement/setup-monitoring-user.sh
 ./scripts/containerManagement/deploy-supporting-services.sh
 ```
@@ -81,10 +81,10 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 ### Container Management
 
 ```bash
-# Deploy main database container
+# Deploy main database container (PostgreSQL only)
 ./scripts/containerManagement/deploy-container.sh
 
-# Deploy monitoring and supporting services
+# Deploy monitoring and supporting services (postgres-exporter, ServiceMonitor, PrometheusRule)
 ./scripts/containerManagement/deploy-supporting-services.sh
 
 # Get status of supporting services and monitoring
@@ -209,7 +209,7 @@ Grafana:
 
 ### Monitoring Components
 
-- **postgres_exporter**: Sidecar container for metrics collection (port 9187)
+- **postgres_exporter**: Separate deployment for metrics collection (port 9187)
 - **ServiceMonitor**: Automatic Prometheus service discovery
 - **PrometheusRule**: Alerting rules for critical database conditions
 - **Custom metrics**: Recipe-specific business metrics and performance data
@@ -218,12 +218,13 @@ Grafana:
 ### Monitoring Setup Workflow
 
 1. Deploy main database: `./scripts/containerManagement/deploy-container.sh`
-2. Setup monitoring user: `./scripts/dbManagement/setup-monitoring-user.sh`
-3. Deploy monitoring services:
+2. Load database schema: `./scripts/dbManagement/load-schema.sh`
+3. Setup monitoring user: `./scripts/dbManagement/setup-monitoring-user.sh`
+4. Deploy monitoring services:
    `./scripts/containerManagement/deploy-supporting-services.sh`
-4. Check status:
+5. Check status:
    `./scripts/containerManagement/get-supporting-services-status.sh`
-5. Import Grafana dashboard from
+6. Import Grafana dashboard from
    `monitoring/grafana-dashboards/postgresql-overview.json`
 
 ### Available Metrics
@@ -251,7 +252,7 @@ kubectl logs -n recipe-database deployment/recipe-database -c recipe-database --
 kubectl port-forward -n recipe-database svc/recipe-database-service 5432:5432
 
 # Access metrics endpoint
-kubectl port-forward -n recipe-database svc/recipe-database-service 9187:9187
+kubectl port-forward -n recipe-database svc/postgres-exporter-service 9187:9187
 curl http://localhost:9187/metrics
 ```
 
@@ -265,7 +266,8 @@ curl http://localhost:9187/metrics
 ### Database Access Patterns
 
 - **Namespace**: All resources are in `recipe-database` namespace
-- **Service Name**: `recipe-database-service`
+- **Database Service**: `recipe-database-service`
+- **Monitoring Service**: `postgres-exporter-service`
 - **Database Port**: 5432 (PostgreSQL)
 - **Metrics Port**: 9187 (postgres_exporter)
 - **Schema**: All tables use the `recipe_manager` schema

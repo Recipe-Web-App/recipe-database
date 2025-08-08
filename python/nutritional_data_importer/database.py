@@ -7,6 +7,7 @@
 
 import logging
 import os
+import socket
 
 import psycopg2
 from data_cleaning import clean_numeric_value
@@ -25,10 +26,17 @@ def get_sqlalchemy_engine():
     """Get SQLAlchemy engine using environment variables."""
     global _engine
     if _engine is None:
-        database_url = (
-            f"postgresql://{os.getenv('DB_USERNAME')}:"
-            f"{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:"
-            f"{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME')}"
+        # Use the same environment variable names as psycopg2 connection
+        host = os.getenv("POSTGRES_HOST", "localhost")
+        database = os.getenv("POSTGRES_DB", "recipe_manager")
+        user = os.getenv("DB_MAINT_USER", "db_maint_user")
+        password = os.getenv("DB_MAINT_PASSWORD", "")
+        port = os.getenv("POSTGRES_PORT", "5432")
+
+        database_url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
+        logger.info(
+            f"🔧 Creating SQLAlchemy engine for: {user}@{host}:{port}/{database}"
         )
         _engine = create_engine(database_url)
     return _engine
@@ -49,13 +57,48 @@ def get_nutritional_info_table():
 def get_database_connection():
     """Get a database connection using environment variables."""
     try:
-        # Get database configuration from environment
+        # Get database configuration from environment with validation
+        host = os.getenv("POSTGRES_HOST")
+        database = os.getenv("POSTGRES_DB")
+        user = os.getenv("DB_MAINT_USER")
+        password = os.getenv("DB_MAINT_PASSWORD")
+        port = os.getenv("POSTGRES_PORT", "5432")
+
+        # Debug environment variables
+        logger.info("🔧 Database connection environment variables:")
+        logger.info(f"   POSTGRES_HOST: {repr(host)} {'✅' if host else '❌ MISSING'}")
+        logger.info(
+            f"   POSTGRES_DB: {repr(database)} {'✅' if database else '❌ MISSING'}"
+        )
+        logger.info(f"   DB_MAINT_USER: {repr(user)} {'✅' if user else '❌ MISSING'}")
+        logger.info(f"   DB_MAINT_PASSWORD: {'[SET]' if password else '❌ MISSING'}")
+        logger.info(f"   POSTGRES_PORT: {repr(port)}")
+
+        # Validate required environment variables
+        missing_vars = []
+        if not host:
+            missing_vars.append("POSTGRES_HOST")
+        if not database:
+            missing_vars.append("POSTGRES_DB")
+        if not user:
+            missing_vars.append("DB_MAINT_USER")
+        if not password:
+            missing_vars.append("DB_MAINT_PASSWORD")
+
+        if missing_vars:
+            error_msg = (
+                f"Missing required environment variables: {', '.join(missing_vars)}"
+            )
+            logger.error(f"❌ {error_msg}")
+            raise ValueError(error_msg)
+
+        # Apply fallbacks for optional variables
         db_config = {
-            "host": os.getenv("POSTGRES_HOST", "localhost"),
-            "database": os.getenv("POSTGRES_DB", "recipe_manager"),
-            "user": os.getenv("DB_MAINT_USER", "db_maint_user"),
-            "password": os.getenv("DB_MAINT_PASSWORD", ""),
-            "port": os.getenv("POSTGRES_PORT", "5432"),
+            "host": host,
+            "database": database,
+            "user": user,
+            "password": password,
+            "port": port,
         }
 
         logger.info(
@@ -64,6 +107,15 @@ def get_database_connection():
                 f"{db_config['port']}/{db_config['database']}"
             )
         )
+
+        # Test DNS resolution first
+        try:
+            logger.info(f"🔍 Testing DNS resolution for host: {host}")
+            ip = socket.gethostbyname(host)
+            logger.info(f"✅ DNS resolution successful: {host} -> {ip}")
+        except socket.gaierror as dns_error:
+            logger.error(f"❌ DNS resolution failed for {host}: {dns_error}")
+            raise ConnectionError(f"Cannot resolve hostname '{host}': {dns_error}")
 
         # Create connection
         conn = psycopg2.connect(**db_config)
@@ -79,6 +131,11 @@ def get_database_connection():
 
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
+        logger.error("Connection attempt details:")
+        logger.error(f"  Host: {repr(os.getenv('POSTGRES_HOST'))}")
+        logger.error(f"  Database: {repr(os.getenv('POSTGRES_DB'))}")
+        logger.error(f"  User: {repr(os.getenv('DB_MAINT_USER'))}")
+        logger.error(f"  Port: {repr(os.getenv('POSTGRES_PORT', '5432'))}")
         raise
 
 
@@ -366,8 +423,11 @@ def batch_query_existing_products(conn, product_names):
 
         with engine.connect() as sqlalchemy_conn:
             # Use SQLAlchemy for safe IN clause query
+            # Use func for database functions and proper column reference
+            from sqlalchemy import func
+
             stmt = select(table).where(
-                text("LOWER(TRIM(product_name))").in_(
+                func.lower(func.trim(table.c.product_name)).in_(
                     [name.strip().lower() for name in product_names]
                 )
             )

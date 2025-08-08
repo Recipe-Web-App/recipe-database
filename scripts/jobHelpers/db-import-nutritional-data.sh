@@ -95,6 +95,67 @@ function verify_data() {
   echo "    File size: $file_size"
 }
 
+# Function to debug environment variables
+function debug_environment() {
+  print_separator "="
+  echo "🔧 Environment Variables Debug"
+  print_separator "-"
+
+  echo "Database connection environment variables:"
+  echo "  POSTGRES_HOST: ${POSTGRES_HOST:-'❌ NOT SET'}"
+  echo "  POSTGRES_DB: ${POSTGRES_DB:-'❌ NOT SET'}"
+  echo "  POSTGRES_SCHEMA: ${POSTGRES_SCHEMA:-'❌ NOT SET'}"
+  echo "  DB_MAINT_USER: ${DB_MAINT_USER:-'❌ NOT SET'}"
+  echo "  DB_MAINT_PASSWORD: ${DB_MAINT_PASSWORD:+'[SET]'}"
+  echo "  POSTGRES_PORT: ${POSTGRES_PORT:-'5432 (default)'}"
+  echo ""
+
+  echo "Job-specific environment variables:"
+  echo "  IMPORT_DATA_DIR: ${IMPORT_DATA_DIR:-'❌ NOT SET'}"
+  echo ""
+
+  # Test DNS resolution if hostname is set
+  if [[ -n "${POSTGRES_HOST:-}" ]]; then
+    echo "🔍 Testing DNS resolution for POSTGRES_HOST..."
+    if command -v nslookup >/dev/null 2>&1; then
+      echo "Using nslookup:"
+      nslookup "$POSTGRES_HOST" || echo "❌ nslookup failed"
+    elif command -v dig >/dev/null 2>&1; then
+      echo "Using dig:"
+      dig +short "$POSTGRES_HOST" || echo "❌ dig failed"
+    elif command -v getent >/dev/null 2>&1; then
+      echo "Using getent:"
+      getent hosts "$POSTGRES_HOST" || echo "❌ getent failed"
+    else
+      echo "⚠️  No DNS lookup tools available (nslookup, dig, getent)"
+    fi
+    echo ""
+  fi
+
+  # Test network connectivity if hostname resolves
+  if [[ -n "${POSTGRES_HOST:-}" ]]; then
+    echo "🔗 Testing network connectivity..."
+    if command -v nc >/dev/null 2>&1; then
+      echo "Testing port 5432 connectivity:"
+      if timeout 5 nc -z "$POSTGRES_HOST" 5432; then
+        echo "✅ Port 5432 is accessible"
+      else
+        echo "❌ Cannot connect to port 5432"
+      fi
+    elif command -v telnet >/dev/null 2>&1; then
+      echo "Testing with telnet (timeout 5s):"
+      if timeout 5 bash -c "</dev/tcp/$POSTGRES_HOST/5432" 2>/dev/null; then
+        echo "✅ Port 5432 is accessible"
+      else
+        echo "❌ Cannot connect to port 5432"
+      fi
+    else
+      echo "⚠️  No network testing tools available (nc, telnet)"
+    fi
+    echo ""
+  fi
+}
+
 # Function to run the Python import script
 function run_import() {
   print_separator "="
@@ -135,6 +196,9 @@ function main() {
 
   # Verify data directory and CSV file
   verify_data
+
+  # Debug environment variables and connectivity
+  debug_environment
 
   # Run the import
   run_import

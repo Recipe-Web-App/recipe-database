@@ -5,8 +5,8 @@ metadata:
   name: recipe-database
   namespace: recipe-database
   annotations:
-    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem
-    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (PostgreSQL requirements)
+    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem,container-security-context-user-group-id
+    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (PostgreSQL requirements), init container root user (required for chown)
 spec:
   replicas: 1
   selector:
@@ -17,6 +17,32 @@ spec:
       labels:
         app: recipe-database
     spec:
+      initContainers:
+        - name: fix-volume-permissions
+          image: busybox:1.35
+          command: ["chown", "10001:10001", "/var/lib/postgresql/data"]
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+          resources:
+            requests:
+              memory: "8Mi"
+              cpu: "10m"
+              ephemeral-storage: "16Mi"
+            limits:
+              memory: "16Mi"
+              cpu: "50m"
+              ephemeral-storage: "32Mi"
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
       containers:
         - name: recipe-database
           image: recipe-database:latest
@@ -74,71 +100,19 @@ spec:
             tcpSocket:
               port: 5432
             initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
           readinessProbe:
             exec:
               command:
-                - pg_isready
-                - -U
-                - postgres
-                - -d
-                - postgres
+                - sh
+                - -c
+                - 'pg_isready -h localhost -p 5432 -U "$POSTGRES_USER" -d
+                  "$POSTGRES_DB"'
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3
-        - name: postgres-exporter
-          image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
-          imagePullPolicy: Always
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 10002
-            runAsGroup: 10002
-            readOnlyRootFilesystem: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-          ports:
-            - containerPort: 9187
-              name: metrics
-          env:
-            - name: DATA_SOURCE_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: recipe-database-secret
-                  key: POSTGRES_EXPORTER_DATA_SOURCE_NAME
-            - name: PG_EXPORTER_EXTEND_QUERY_PATH
-              value: "/etc/postgres_exporter/queries.yaml"
-          volumeMounts:
-            - mountPath: /etc/postgres_exporter
-              name: postgres-exporter-config
-              readOnly: true
-          resources:
-            requests:
-              memory: "32Mi"
-              cpu: "50m"
-              ephemeral-storage: "100Mi"
-            limits:
-              memory: "64Mi"
-              cpu: "100m"
-              ephemeral-storage: "200Mi"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 9187
-            initialDelaySeconds: 30
-            periodSeconds: 30
-          readinessProbe:
-            httpGet:
-              path: /metrics
-              port: 9187
-            initialDelaySeconds: 10
-            periodSeconds: 15
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: recipe-database-pvc
-        - name: postgres-exporter-config
-          configMap:
-            name: postgres-exporter-config

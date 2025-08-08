@@ -13,6 +13,35 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      initContainers:
+        - name: increase-file-limits
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              echo "Attempting to increase inotify limits..."
+              echo 524288 > /proc/sys/fs/inotify/max_user_watches || echo "Unable to increase limits (requires privileged mode)"
+              echo 65536 > /proc/sys/fs/inotify/max_user_instances || echo "Unable to increase instances"
+              echo "Init container completed - proceeding with main container"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "8Mi"
+              cpu: "10m"
+              ephemeral-storage: "16Mi"
+            limits:
+              memory: "16Mi"
+              cpu: "50m"
+              ephemeral-storage: "32Mi"
       containers:
         - name: db-import-nutritional-data
           image: recipe-database:latest
@@ -28,13 +57,13 @@ spec:
                 - ALL
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "200m"
-              ephemeral-storage: "1Gi"
-            limits:
-              memory: "512Mi"
+              memory: "1Gi"
               cpu: "500m"
               ephemeral-storage: "2Gi"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+              ephemeral-storage: "4Gi"
           env:
             - name: POSTGRES_HOST
               valueFrom:

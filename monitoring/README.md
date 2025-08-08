@@ -7,7 +7,7 @@ PostgreSQL instance using Prometheus and Grafana.
 
 The monitoring setup includes:
 
-- **postgres_exporter**: Sidecar container for metrics collection
+- **postgres_exporter**: Separate deployment for metrics collection
 - **ServiceMonitor**: Prometheus service discovery configuration
 - **PrometheusRule**: Alerting rules for critical database conditions
 - **Grafana Dashboards**: Pre-configured dashboards for visualization
@@ -95,20 +95,25 @@ kubectl create secret generic recipe-database-secret \
 Apply all monitoring-related Kubernetes resources:
 
 ```bash
-# Deploy the updated deployment with postgres_exporter sidecar
-kubectl apply -f k8s/deployment.yaml
-
-# Deploy the updated service with metrics port
-kubectl apply -f k8s/service.yaml
-
 # Deploy the postgres_exporter configuration
 kubectl apply -f k8s/postgres-exporter-configmap.yaml
+
+# Deploy the postgres_exporter deployment and service
+kubectl apply -f k8s/postgres-exporter-deployment.yaml
+kubectl apply -f k8s/postgres-exporter-service.yaml
 
 # Deploy Prometheus service discovery
 kubectl apply -f k8s/servicemonitor.yaml
 
 # Deploy alerting rules
 kubectl apply -f k8s/prometheusrule.yaml
+```
+
+Or use the convenience script:
+
+```bash
+# Deploy all monitoring components
+./scripts/containerManagement/deploy-supporting-services.sh
 ```
 
 ### 4. Import Grafana Dashboard
@@ -164,12 +169,12 @@ kubectl apply -f k8s/prometheusrule.yaml
    - Check the DATA_SOURCE_NAME secret is correctly formatted
    - Verify the monitoring user has proper permissions
    - Check container logs:
-     `kubectl logs deployment/recipe-database -c postgres-exporter`
+     `kubectl logs deployment/postgres-exporter -n recipe-database`
 
 2. **No metrics in Prometheus**
    - Verify ServiceMonitor is applied and Prometheus has proper RBAC
    - Check if metrics endpoint is accessible:
-     `kubectl port-forward svc/recipe-database-service 9187:9187`
+     `kubectl port-forward svc/postgres-exporter-service 9187:9187`
    - Test metrics endpoint: `curl http://localhost:9187/metrics`
 
 3. **Custom queries failing**
@@ -181,10 +186,10 @@ kubectl apply -f k8s/prometheusrule.yaml
 
 ```bash
 # Check postgres_exporter logs
-kubectl logs deployment/recipe-database -c postgres-exporter -f
+kubectl logs deployment/postgres-exporter -n recipe-database -f
 
 # Test metrics endpoint
-kubectl port-forward svc/recipe-database-service 9187:9187
+kubectl port-forward svc/postgres-exporter-service 9187:9187
 curl http://localhost:9187/metrics | grep recipe_
 
 # Check Prometheus targets

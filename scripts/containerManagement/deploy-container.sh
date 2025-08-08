@@ -94,6 +94,7 @@ if [ -f .env ]; then
   BEFORE_ENV=$(mktemp)
   AFTER_ENV=$(mktemp)
   env | cut -d= -f1 | sort > "$BEFORE_ENV"
+  # shellcheck disable=SC1091
   source .env
   # Capture env after
   env | cut -d= -f1 | sort > "$AFTER_ENV"

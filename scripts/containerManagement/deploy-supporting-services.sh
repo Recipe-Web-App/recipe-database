@@ -42,6 +42,14 @@ kubectl apply -f "${CONFIG_DIR}/postgres-exporter-configmap.yaml"
 echo "✅ postgres_exporter ConfigMap applied."
 
 print_separator "="
+echo "📊 Deploying postgres_exporter deployment..."
+print_separator "-"
+
+kubectl apply -f "${CONFIG_DIR}/postgres-exporter-deployment.yaml"
+kubectl apply -f "${CONFIG_DIR}/postgres-exporter-service.yaml"
+echo "✅ postgres_exporter deployment and service applied."
+
+print_separator "="
 echo "🔍 Deploying ServiceMonitor for Prometheus discovery..."
 print_separator "-"
 
@@ -68,31 +76,31 @@ else
 fi
 
 print_separator "="
-echo "🔄 Restarting main deployment to pick up monitoring sidecar..."
+echo "⏳ Waiting for postgres_exporter deployment to be ready..."
 print_separator "-"
 
-kubectl rollout restart deployment/recipe-database -n "$NAMESPACE"
-kubectl rollout status deployment/recipe-database -n "$NAMESPACE" --timeout=120s
+kubectl wait --namespace="$NAMESPACE" \
+  --for=condition=Available deployment/postgres-exporter \
+  --timeout=120s
 
 print_separator "="
-echo "⏳ Waiting for postgres_exporter to be ready..."
+echo "🧪 Testing postgres_exporter metrics endpoint..."
 print_separator "-"
 
 # Wait for the deployment to be ready
 kubectl wait --namespace="$NAMESPACE" \
   --for=condition=Ready pod \
-  --selector=app=recipe-database \
+  --selector=app=postgres-exporter \
   --timeout=120s
 
 # Test if metrics endpoint is accessible
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
+POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=postgres-exporter -o jsonpath="{.items[0].metadata.name}")
 
-echo "🧪 Testing metrics endpoint..."
-if kubectl exec -n "$NAMESPACE" "$POD_NAME" -c postgres-exporter -- wget -q -O- http://localhost:9187/metrics | head -5 >/dev/null 2>&1; then
+if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- wget -q -O- http://localhost:9187/metrics | head -5 >/dev/null 2>&1; then
   echo "✅ postgres_exporter metrics endpoint is responding."
 else
   echo "⚠️  postgres_exporter metrics endpoint test failed."
-  echo "    Check the logs: kubectl logs -n $NAMESPACE $POD_NAME -c postgres-exporter"
+  echo "    Check the logs: kubectl logs -n $NAMESPACE $POD_NAME"
 fi
 
 print_separator "="
@@ -111,16 +119,15 @@ if kubectl get prometheusrule recipe-database-alerts -n "$NAMESPACE" >/dev/null 
 else
   echo "  ⚠️  PrometheusRule (not deployed - Prometheus Operator not found)"
 fi
-echo "  ✅ postgres_exporter sidecar container"
+echo "  ✅ postgres_exporter deployment"
 
 print_separator "="
 echo "🔗 Access Information:"
 print_separator "-"
 
 echo "📊 Metrics Endpoint:"
-echo "  URL: http://recipe-database-service.$NAMESPACE.svc.cluster.local:9187/metrics"
+echo "  URL: http://postgres-exporter-service.$NAMESPACE.svc.cluster.local:9187/metrics"
 echo "  Pod: $POD_NAME"
-echo "  Container: postgres-exporter"
 
 echo ""
 echo "🎛️  Grafana Dashboard:"
@@ -143,6 +150,6 @@ echo "2. Import Grafana dashboard from:"
 echo "   monitoring/grafana-dashboards/postgresql-overview.json"
 echo ""
 echo "3. Check metrics are being collected:"
-echo "   kubectl port-forward -n $NAMESPACE svc/recipe-database-service 9187:9187"
+echo "   kubectl port-forward -n $NAMESPACE svc/postgres-exporter-service 9187:9187"
 echo "   curl http://localhost:9187/metrics"
 echo ""
