@@ -1,0 +1,168 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: recipe-database-alerts
+  namespace: recipe-database
+  labels:
+    app: recipe-database
+    component: postgres-exporter
+spec:
+  groups:
+    - name: postgresql.rules
+      interval: 30s
+      rules:
+        # Database connectivity alerts
+        - alert: PostgreSQLDown
+          expr: pg_up == 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL instance is down"
+            description:
+              "PostgreSQL database instance {{ $labels.instance }} is not
+              responding"
+
+        # Connection-based alerts
+        - alert: PostgreSQLTooManyConnections
+          expr:
+            sum by (instance) (pg_stat_activity_count) >
+            (pg_settings_max_connections * 0.8)
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL has too many connections"
+            description:
+              "PostgreSQL instance {{ $labels.instance }} has {{ $value }}
+              connections, which is more than 80% of max_connections"
+
+        - alert: PostgreSQLHighConnections
+          expr:
+            sum by (instance) (pg_stat_activity_count) >
+            (pg_settings_max_connections * 0.9)
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL connection limit nearly reached"
+            description:
+              "PostgreSQL instance {{ $labels.instance }} has {{ $value }}
+              connections, which is more than 90% of max_connections"
+
+        # Performance alerts
+        - alert: PostgreSQLLowCacheHitRatio
+          expr:
+            pg_stat_database_blks_hit / (pg_stat_database_blks_hit +
+            pg_stat_database_blks_read) < 0.9
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL low cache hit ratio"
+            description:
+              "PostgreSQL instance {{ $labels.instance }} has a cache hit ratio
+              of {{ $value | humanizePercentage }}, which is below 90%"
+
+        - alert: PostgreSQLSlowQueries
+          expr: avg_over_time(pg_stat_activity_max_tx_duration[1m]) > 300
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL has slow running queries"
+            description:
+              "PostgreSQL instance {{ $labels.instance }} has queries running
+              for more than 5 minutes"
+
+        # Lock alerts
+        - alert: PostgreSQLDeadlocks
+          expr: increase(pg_stat_database_deadlocks[1m]) > 5
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL has deadlocks"
+            description:
+              "PostgreSQL instance {{ $labels.instance }} has had {{ $value }}
+              deadlocks in the last minute"
+
+        # Storage alerts
+        - alert: PostgreSQLDiskSpaceUsage
+          expr: (pg_database_size_bytes / (1024*1024*1024)) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL database size is growing"
+            description:
+              "PostgreSQL database {{ $labels.datname }} on instance {{
+              $labels.instance }} is {{ $value | humanize }}GB"
+
+        # Replication alerts (if applicable)
+        - alert: PostgreSQLReplicationLag
+          expr: pg_replication_lag > 30
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL replication lag is high"
+            description:
+              "PostgreSQL replication lag on {{ $labels.instance }} is {{ $value
+              }} seconds"
+
+        # Recipe-specific business logic alerts
+        - alert: PostgreSQLNoRecentRecipes
+          expr: recipe_stats_total_recipes == 0
+          for: 60m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No recipes created recently"
+            description:
+              "No recipes have been created in the last 24 hours on {{
+              $labels.instance }}"
+
+        - alert: PostgreSQLHighErrorRate
+          expr:
+            increase(pg_stat_database_xact_rollback[5m]) /
+            increase(pg_stat_database_xact_commit[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL high transaction rollback rate"
+            description:
+              "PostgreSQL instance {{ $labels.instance }} has a transaction
+              rollback rate of {{ $value | humanizePercentage }} over the last 5
+              minutes"
+
+    - name: postgresql.recipe-business-rules
+      interval: 60s
+      rules:
+        # Business metrics recording rules
+        - record: recipe:daily_creation_rate
+          expr: increase(recipe_stats_total_recipes[24h])
+
+        - record: recipe:active_users_rate
+          expr: increase(user_activity_active_recipe_creators[24h])
+
+        - record: recipe:engagement_ratio
+          expr:
+            user_activity_active_reviewers /
+            user_activity_active_recipe_creators
+
+        # Performance recording rules
+        - record: postgresql:cache_hit_ratio
+          expr:
+            pg_stat_database_blks_hit / (pg_stat_database_blks_hit +
+            pg_stat_database_blks_read)
+
+        - record: postgresql:connection_utilization
+          expr:
+            sum by (instance) (pg_stat_activity_count) /
+            pg_settings_max_connections
+
+        - record: postgresql:average_query_time
+          expr: pg_stat_database_tup_fetched / pg_stat_database_tup_returned

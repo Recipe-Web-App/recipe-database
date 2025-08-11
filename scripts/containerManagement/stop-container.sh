@@ -10,7 +10,7 @@ DEPLOYMENT="recipe-database"
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"

@@ -4,6 +4,9 @@ kind: Deployment
 metadata:
   name: recipe-database
   namespace: recipe-database
+  annotations:
+    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem,container-security-context-user-group-id
+    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (PostgreSQL requirements), init container root user (required for chown)
 spec:
   replicas: 1
   selector:
@@ -14,10 +17,45 @@ spec:
       labels:
         app: recipe-database
     spec:
+      initContainers:
+        - name: fix-volume-permissions
+          image: busybox:1.35
+          command: ["chown", "10001:10001", "/var/lib/postgresql/data"]
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+          resources:
+            requests:
+              memory: "8Mi"
+              cpu: "10m"
+              ephemeral-storage: "16Mi"
+            limits:
+              memory: "16Mi"
+              cpu: "50m"
+              ephemeral-storage: "32Mi"
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
       containers:
         - name: recipe-database
           image: recipe-database:latest
           imagePullPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 5432
           env:
@@ -53,9 +91,27 @@ spec:
             requests:
               memory: "256Mi"
               cpu: "250m"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "512Mi"
               cpu: "500m"
+              ephemeral-storage: "2Gi"
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'pg_isready -h localhost -p 5432 -U "$POSTGRES_USER" -d
+                  "$POSTGRES_DB"'
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:

@@ -7,7 +7,7 @@ set -euo pipefail
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
@@ -52,7 +52,7 @@ echo "   • Truncate: $TRUNCATE"
 print_separator "-"
 
 # Function to get latest backup if not specified
-get_latest_backup() {
+function get_latest_backup() {
   local latest_backup
   latest_backup=$(find /app/db/data/backups/ -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -n 1)
   if [ -n "$latest_backup" ]; then
@@ -97,7 +97,7 @@ echo -e "${GREEN}✅ Backup files validated${NC}"
 print_separator "="
 echo -e "${CYAN}🔄 Starting restore process...${NC}"
 print_separator "-"
-execute_sql() {
+function execute_sql() {
   local sql="$1"
   local description="$2"
 
@@ -113,7 +113,7 @@ execute_sql() {
 }
 
 # Function to check if table exists
-check_table_exists() {
+function check_table_exists() {
   local exists
   exists=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
       -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c "
@@ -132,7 +132,7 @@ check_table_exists() {
 }
 
 # Function to restore file with progress
-restore_file_with_progress() {
+function restore_file_with_progress() {
   local file="$1"
   local description="$2"
   local ignore_errors="${3:-false}"

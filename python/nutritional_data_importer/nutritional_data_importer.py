@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""
-OpenFoodFacts Nutritional Info Importer
+# Recipe Database - PostgreSQL database for recipe management
+# Copyright (c) 2024 Your Name <your.email@example.com>
+#
+# Licensed under the MIT License. See LICENSE file for details.
+
+"""OpenFoodFacts Nutritional Info Importer.
 
 This script imports ingredient data from an OpenFoodFacts CSV file
 into the recipe database.
@@ -73,7 +77,7 @@ def print_results(results: dict):
 
 
 def main():
-    """Main entry point for the script."""
+    """Import ingredients from OpenFoodFacts CSV into recipe database."""
     parser = argparse.ArgumentParser(
         description="Import ingredients from OpenFoodFacts CSV into recipe database",
         formatter_class=argparse.RawDescriptionHelpFormatter,

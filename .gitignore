@@ -13,3 +13,5 @@ db/data/*/*
 !db/data/*/.gitkeep
 
 tmp/
+
+node_modules/

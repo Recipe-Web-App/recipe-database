@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-exporter-config
+  namespace: recipe-database
+  labels:
+    app: recipe-database
+    component: postgres-exporter
+data:
+  queries.yaml: |
+    # Custom queries for recipe database monitoring
+
+    # Recipe-specific metrics
+    recipe_stats:
+      query: |
+        SELECT
+          COUNT(*) as total_recipes,
+          COUNT(DISTINCT user_id) as users_with_recipes,
+          AVG(EXTRACT(EPOCH FROM (updated_at - created_at))) as avg_recipe_lifetime_seconds
+        FROM recipe_manager.recipes
+        WHERE created_at > NOW() - INTERVAL '24 hours'
+      metrics:
+        - total_recipes:
+            usage: "GAUGE"
+            description: "Total number of recipes created in last 24 hours"
+        - users_with_recipes:
+            usage: "GAUGE"
+            description: "Number of unique users who created recipes in last 24 hours"
+        - avg_recipe_lifetime_seconds:
+            usage: "GAUGE"
+            description: "Average time between recipe creation and last update"
+
+    # User engagement metrics
+    user_activity:
+      query: |
+        SELECT
+          COUNT(DISTINCT r.user_id) as active_recipe_creators,
+          COUNT(DISTINCT rv.user_id) as active_reviewers,
+          COUNT(DISTINCT f.user_id) as active_favoriters
+        FROM recipe_manager.recipes r
+        LEFT JOIN recipe_manager.reviews rv ON rv.created_at > NOW() - INTERVAL '24 hours'
+        LEFT JOIN recipe_manager.recipe_favorites f ON f.created_at > NOW() - INTERVAL '24 hours'
+        WHERE r.created_at > NOW() - INTERVAL '24 hours'
+      metrics:
+        - active_recipe_creators:
+            usage: "GAUGE"
+            description: "Number of users who created recipes in last 24 hours"
+        - active_reviewers:
+            usage: "GAUGE"
+            description: "Number of users who left reviews in last 24 hours"
+        - active_favoriters:
+            usage: "GAUGE"
+            description: "Number of users who favorited recipes in last 24 hours"
+
+    # Database size and growth metrics
+    table_sizes:
+      query: |
+        SELECT
+          schemaname,
+          tablename,
+          pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
+        FROM pg_tables
+        WHERE schemaname = 'recipe_manager'
+      metrics:
+        - size_bytes:
+            usage: "GAUGE"
+            description: "Size of recipe_manager tables in bytes"
+            key_labels:
+              - schemaname
+              - tablename
+
+    # Query performance metrics
+    slow_queries:
+      query: |
+        SELECT
+          query,
+          calls,
+          mean_exec_time,
+          total_exec_time
+        FROM pg_stat_statements
+        WHERE query LIKE '%recipe_manager%'
+        AND mean_exec_time > 100
+        ORDER BY mean_exec_time DESC
+        LIMIT 10
+      metrics:
+        - calls:
+            usage: "COUNTER"
+            description: "Number of times the query was executed"
+            key_labels:
+              - query
+        - mean_exec_time:
+            usage: "GAUGE"
+            description: "Mean execution time of the query in milliseconds"
+            key_labels:
+              - query
+        - total_exec_time:
+            usage: "COUNTER"
+            description: "Total execution time of the query in milliseconds"
+            key_labels:
+              - query

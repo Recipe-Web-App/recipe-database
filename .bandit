@@ -1,0 +1,9 @@
+exclude_dirs:
+  - tests
+  - test
+  - .git
+  - __pycache__
+skips:
+  - B101
+confidence: MEDIUM
+format: txt

@@ -6,14 +6,64 @@ metadata:
   namespace: recipe-database
   labels:
     app: recipe-database
+  annotations:
+    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem
+    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (Python data processing)
 spec:
   template:
     spec:
       restartPolicy: Never
+      initContainers:
+        - name: increase-file-limits
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              echo "Attempting to increase inotify limits..."
+              echo 524288 > /proc/sys/fs/inotify/max_user_watches || echo "Unable to increase limits (requires privileged mode)"
+              echo 65536 > /proc/sys/fs/inotify/max_user_instances || echo "Unable to increase instances"
+              echo "Init container completed - proceeding with main container"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "8Mi"
+              cpu: "10m"
+              ephemeral-storage: "16Mi"
+            limits:
+              memory: "16Mi"
+              cpu: "50m"
+              ephemeral-storage: "32Mi"
       containers:
         - name: db-import-nutritional-data
           image: recipe-database:latest
           imagePullPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+              ephemeral-storage: "2Gi"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+              ephemeral-storage: "4Gi"
           env:
             - name: POSTGRES_HOST
               valueFrom:
@@ -49,7 +99,12 @@ spec:
               mountPath: /app/python
             - name: scripts-volume
               mountPath: /app/scripts
-          command: ["bash", "-c", "/app/scripts/jobHelpers/db-import-nutritional-data.sh"]
+          command:
+            [
+              "bash",
+              "-c",
+              "/app/scripts/jobHelpers/db-import-nutritional-data.sh",
+            ]
       volumes:
         - name: data-volume
           hostPath:

@@ -1,0 +1,328 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., v1.0.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+jobs:
+  validate-release:
+    name: 🔍 Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+            if [[ "$VERSION" =~ -[a-zA-Z] ]]; then
+              IS_PRERELEASE="true"
+            else
+              IS_PRERELEASE="false"
+            fi
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION (prerelease: $IS_PRERELEASE)"
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: v1.0.0 or v1.0.0-alpha.1"
+            exit 1
+          fi
+          echo "✅ Version format is valid: $VERSION"
+
+      - name: Check if tag exists (for workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "❌ Tag $VERSION already exists"
+            exit 1
+          fi
+          echo "✅ Tag $VERSION does not exist yet"
+
+  build-and-test:
+    name: 🧪 Build and Test
+    runs-on: ubuntu-latest
+    needs: validate-release
+
+    services:
+      postgres:
+        image: postgres:15.4
+        env:
+          POSTGRES_PASSWORD: test_password # pragma: allowlist secret
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          if [ -f python/requirements.txt ]; then
+            pip install -r python/requirements.txt
+          fi
+          if [ -f python/requirements-dev.txt ]; then
+            pip install -r python/requirements-dev.txt
+          fi
+
+      - name: Run database tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db # pragma: allowlist secret
+        run: |
+          # Run schema migrations
+          for sql_file in db/init/schema/*.sql; do
+            if [ -f "$sql_file" ]; then
+              echo "Applying $sql_file"
+              psql "$DATABASE_URL" -f "$sql_file"
+            fi
+          done
+
+          # Run data initialization
+          for sql_file in db/init/data/*.sql; do
+            if [ -f "$sql_file" ]; then
+              echo "Applying $sql_file"
+              psql "$DATABASE_URL" -f "$sql_file"
+            fi
+          done
+
+          # Test database connectivity
+          psql "$DATABASE_URL" -c "SELECT version();"
+
+      - name: Run Python tests
+        if: hashFiles('python/tests/**/*.py') != ''
+        run: |
+          cd python
+          python -m pytest tests/ -v --tb=short
+
+      - name: Validate Kubernetes manifests
+        run: |
+          # Check if kubectl is available, install if not
+          if ! command -v kubectl &> /dev/null; then
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+          fi
+
+          # Validate manifests
+          for manifest in k8s/*.yaml; do
+            if [ -f "$manifest" ]; then
+              echo "Validating $manifest"
+              kubectl apply --dry-run=client -f "$manifest"
+            fi
+          done
+
+  create-release:
+    name: 📦 Create Release
+    runs-on: ubuntu-latest
+    needs: [validate-release, build-and-test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create tag (for workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "## 🚀 Changes since $PREVIOUS_TAG" > changelog.md
+            echo "" >> changelog.md
+
+            # Get commits since previous tag
+            git log --pretty=format:"- %s (%an)" "$PREVIOUS_TAG"..HEAD >> changelog.md
+
+            echo "" >> changelog.md
+            echo "## 📊 Statistics" >> changelog.md
+            echo "" >> changelog.md
+            echo "- **Commits**: $(git rev-list --count "$PREVIOUS_TAG"..HEAD)" >> changelog.md
+            echo "- **Contributors**: $(git shortlog -sn "$PREVIOUS_TAG"..HEAD | wc -l)" >> changelog.md
+          else
+            echo "## 🚀 Initial Release" > changelog.md
+            echo "" >> changelog.md
+            echo "This is the first release of the Recipe Database project." >> changelog.md
+          fi
+
+          echo "" >> changelog.md
+          echo "## 🔧 Installation" >> changelog.md
+          echo "" >> changelog.md
+          echo "1. Clone the repository:" >> changelog.md
+          echo '```bash' >> changelog.md
+          echo "git clone https://github.com/your-username/recipe-database.git" >> changelog.md
+          echo "cd recipe-database" >> changelog.md
+          echo '```' >> changelog.md
+          echo "" >> changelog.md
+          echo "2. Deploy to Kubernetes:" >> changelog.md
+          echo '```bash' >> changelog.md
+          echo "./scripts/containerManagement/deploy-container.sh" >> changelog.md
+          echo '```' >> changelog.md
+          echo "" >> changelog.md
+          echo "3. Set up monitoring (optional):" >> changelog.md
+          echo '```bash' >> changelog.md
+          echo "./scripts/containerManagement/deploy-supporting-services.sh" >> changelog.md
+          echo '```' >> changelog.md
+
+          # Make changelog available as output
+          {
+            echo 'changelog<<EOF'
+            cat changelog.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.validate-release.outputs.version }}
+          release_name: Release ${{ needs.validate-release.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease:
+            ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
+
+      - name: Create release artifacts
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+
+          # Create deployment package
+          mkdir -p release-artifacts
+
+          # Package Kubernetes manifests
+          tar -czf "release-artifacts/k8s-manifests-${VERSION}.tar.gz" k8s/
+
+          # Package scripts
+          tar -czf "release-artifacts/scripts-${VERSION}.tar.gz" scripts/
+
+          # Package database schema
+          tar -czf "release-artifacts/database-schema-${VERSION}.tar.gz" db/
+
+          # Package Python code (if exists)
+          if [ -d "python" ]; then
+            tar -czf "release-artifacts/python-code-${VERSION}.tar.gz" python/
+          fi
+
+          # Create checksums
+          cd release-artifacts
+          sha256sum *.tar.gz > checksums.txt
+
+          echo "Created release artifacts:"
+          ls -la
+
+      - name: Upload Release Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate-release.outputs.version }}
+          path: release-artifacts/
+
+  deploy-documentation:
+    name: 📚 Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [validate-release, create-release]
+    if: needs.validate-release.outputs.is-prerelease == 'false'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          cname: your-domain.com # Optional: set your custom domain
+
+  notify-release:
+    name: 📢 Notify Release
+    runs-on: ubuntu-latest
+    needs: [validate-release, create-release]
+    if: always() && needs.create-release.result == 'success'
+
+    steps:
+      - name: Notify Slack
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+          if [ "$IS_PRERELEASE" == "true" ]; then
+            EMOJI="🧪"
+            TYPE="Pre-release"
+          else
+            EMOJI="🚀"
+            TYPE="Release"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$EMOJI $TYPE $VERSION of Recipe Database has been published! \n📦 View release: https://github.com/${{ github.repository }}/releases/tag/$VERSION\"}" \
+            $SLACK_WEBHOOK_URL
+
+      - name: Create GitHub Discussion
+        if: needs.validate-release.outputs.is-prerelease == 'false'
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          echo "🎉 Release $VERSION is now available!"
+          echo "Consider creating a GitHub Discussion to announce the release to the community."

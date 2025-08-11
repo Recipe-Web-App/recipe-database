@@ -1,7 +1,11 @@
-"""
-Duplicate handling and merging logic for OpenFoodFacts data import.
-"""
+# Recipe Database - PostgreSQL database for recipe management
+# Copyright (c) 2024 Your Name <your.email@example.com>
+#
+# Licensed under the MIT License. See LICENSE file for details.
 
+"""Duplicate handling and merging logic for OpenFoodFacts data import."""
+
+import contextlib
 import logging
 
 import pandas as pd
@@ -10,9 +14,12 @@ from data_cleaning import clean_numeric_value, clean_nutriscore_grade
 from data_processing import prepare_row_data, should_update_field
 from database import (
     batch_query_existing_products,
+    get_nutritional_info_table,
+    get_sqlalchemy_engine,
     insert_single_row,
     update_existing_product_batch,
 )
+from sqlalchemy import text, update
 
 logger = logging.getLogger(__name__)
 
@@ -80,29 +87,43 @@ def merge_duplicate_with_database(conn, new_row, csv_columns, target_columns, re
 
             # Execute update if we have fields to update
             if update_fields:
-                update_values.append(
-                    existing_dict["nutritional_info_id"]
-                )  # WHERE clause
-                update_sql = f"""
-                    UPDATE nutritional_info
-                    SET {', '.join(update_fields)}, updated_at = now()
-                    WHERE nutritional_info_id = %s
-                """
-                cursor.execute(update_sql, update_values)
+                # Get SQLAlchemy table object
+                table = get_nutritional_info_table()
+                engine = get_sqlalchemy_engine()
 
-                if cursor.rowcount > 0:
-                    results["rows_imported"] += 1  # Count as successful merge
+                # Build update dictionary from changed fields
+                update_dict = {}
+                for i, field_expr in enumerate(update_fields):
+                    if " = " in field_expr:
+                        field_name = field_expr.split(" = ")[0].strip()
+                        update_dict[field_name] = update_values[i]
+
+                # Add updated_at timestamp
+                update_dict["updated_at"] = text("now()")
+
+                with engine.connect() as sqlalchemy_conn:
+                    stmt = (
+                        update(table)
+                        .where(
+                            table.c.nutritional_info_id
+                            == existing_dict["nutritional_info_id"]
+                        )
+                        .values(update_dict)
+                    )
+
+                    result = sqlalchemy_conn.execute(stmt)
+                    sqlalchemy_conn.commit()
+
+                    if result.rowcount > 0:
+                        results["rows_imported"] += 1  # Count as successful merge
 
             # Release the savepoint
             cursor.execute("RELEASE SAVEPOINT merge_duplicate")
 
     except Exception as e:
         # Rollback to savepoint on error
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute("ROLLBACK TO SAVEPOINT merge_duplicate")
-        except Exception:
-            pass  # Ignore rollback errors
+        with contextlib.suppress(Exception), conn.cursor() as cursor:
+            cursor.execute("ROLLBACK TO SAVEPOINT merge_duplicate")
 
         error_msg = (
             f"Failed to merge duplicate product "
@@ -311,16 +332,18 @@ def merge_queue_items(existing_row, new_row, csv_columns, target_columns):
 
             # Combine allergen arrays, removing duplicates
             combined_allergens = list(set(existing_allergens + new_allergens))
-            if combined_allergens:
-                # Store the combined raw string for now (will be processed later)
-                merged_row[col] = ", ".join(
-                    [f"en:{allergen.lower()}" for allergen in combined_allergens]
-                )
+            # Store the combined raw string for now (will be processed later)
+            merged_row[col] = (
+                ", ".join([f"en:{allergen.lower()}" for allergen in combined_allergens])
+                if combined_allergens
+                else None
+            )
 
         # For text fields, prefer longer/more detailed content
-        elif col in ["brands", "categories"]:
-            if len(str(new_value)) > len(str(existing_value)):
-                merged_row[col] = new_value
+        elif col in ["brands", "categories"] and len(str(new_value)) > len(
+            str(existing_value)
+        ):
+            merged_row[col] = new_value
 
     return merged_row
 

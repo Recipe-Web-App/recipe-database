@@ -6,6 +6,9 @@ metadata:
   namespace: recipe-database
   labels:
     app: recipe-database
+  annotations:
+    kube-score/ignore: container-image-tag,container-image-pull-policy,container-security-context-readonlyrootfilesystem
+    # Ignoring: latest tag (local dev), Never pull policy (minikube), writable filesystem (database operations)
 spec:
   template:
     spec:
@@ -14,6 +17,24 @@ spec:
         - name: db-load-test-fixtures
           image: recipe-database:latest
           imagePullPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+              ephemeral-storage: "500Mi"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+              ephemeral-storage: "1Gi"
           env:
             - name: POSTGRES_HOST
               valueFrom:
@@ -50,7 +71,8 @@ spec:
               mountPath: /app/sql
             - name: scripts-volume
               mountPath: /app/scripts
-          command: ["bash", "-c", "/app/scripts/jobHelpers/db-load-test-fixtures.sh"]
+          command:
+            ["bash", "-c", "/app/scripts/jobHelpers/db-load-test-fixtures.sh"]
       volumes:
         - name: sql-volume
           hostPath:

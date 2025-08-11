@@ -1,0 +1,237 @@
+# GitHub Repository Settings
+# This file can be used with the Probot Settings app to automatically configure repository settings
+# See: https://github.com/probot/settings
+
+repository:
+  # Repository metadata
+  name: recipe-database
+  description:
+    "🍽️ PostgreSQL database for recipe management with comprehensive monitoring
+    and automation"
+  homepage: "https://your-username.github.io/recipe-database"
+  topics:
+    - postgresql
+    - database
+    - recipes
+    - kubernetes
+    - monitoring
+    - prometheus
+    - grafana
+    - python
+    - docker
+    - devops
+
+  # Repository settings
+  private: false
+  has_issues: true
+  has_projects: true
+  has_wiki: false
+  has_pages: true
+  has_downloads: true
+  default_branch: main
+
+  # Repository features
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: true
+  allow_auto_merge: true
+  delete_branch_on_merge: true
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
+
+# Branch protection settings
+branches:
+  - name: main
+    protection:
+      # Required status checks
+      required_status_checks:
+        strict: true
+        contexts:
+          - "🧪 Pre-commit hooks"
+          - "🧪 Database Tests"
+          - "🧪 Python Tests"
+          - "🧪 Kubernetes Validation"
+          - "🧪 Integration Tests"
+          - "🔒 Security Scanning"
+          - "📊 Performance Tests"
+
+      # Pull request requirements
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        require_last_push_approval: true
+        bypass_pull_request_allowances:
+          users: []
+          teams: []
+
+      # Additional restrictions
+      restrictions:
+        users: []
+        teams: []
+        apps: []
+
+      # Branch settings
+      allow_force_pushes: false
+      allow_deletions: false
+      block_creations: false
+      required_conversation_resolution: true
+      lock_branch: false
+      allow_fork_syncing: true
+
+  - name: develop
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "🧪 Pre-commit hooks"
+          - "🧪 Database Tests"
+          - "🧪 Python Tests"
+          - "🧪 Kubernetes Validation"
+
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+        require_last_push_approval: false
+
+      restrictions: null
+      allow_force_pushes: false
+      allow_deletions: false
+      required_conversation_resolution: true
+
+# Labels for issues and pull requests
+labels:
+  # Priority labels
+  - name: "priority: critical"
+    color: "d93f0b"
+    description: "Critical priority - immediate attention required"
+
+  - name: "priority: high"
+    color: "ff6b35"
+    description: "High priority - should be addressed soon"
+
+  - name: "priority: medium"
+    color: "ffaa3d"
+    description: "Medium priority - normal timeline"
+
+  - name: "priority: low"
+    color: "5ebeff"
+    description: "Low priority - can wait"
+
+  # Type labels
+  - name: "type: bug"
+    color: "ee0701"
+    description: "Something isn't working correctly"
+
+  - name: "type: feature"
+    color: "336633"
+    description: "New feature or enhancement"
+
+  - name: "type: improvement"
+    color: "84b6eb"
+    description: "Improvement to existing functionality"
+
+  - name: "type: documentation"
+    color: "0052cc"
+    description: "Documentation changes"
+
+  - name: "type: maintenance"
+    color: "fbca04"
+    description: "Maintenance and housekeeping"
+
+  - name: "type: security"
+    color: "b60205"
+    description: "Security-related issue or improvement"
+
+  # Component labels
+  - name: "component: database"
+    color: "c2e0c6"
+    description: "Database schema, functions, or SQL-related"
+
+  - name: "component: monitoring"
+    color: "bfd4f2"
+    description: "Monitoring, metrics, or observability"
+
+  - name: "component: kubernetes"
+    color: "d4c5f9"
+    description: "Kubernetes manifests or deployment"
+
+  - name: "component: python"
+    color: "ffd700"
+    description: "Python code or scripts"
+
+  - name: "component: scripts"
+    color: "c5def5"
+    description: "Shell scripts or automation"
+
+  - name: "component: ci-cd"
+    color: "0e8a16"
+    description: "CI/CD pipelines or automation"
+
+  # Status labels
+  - name: "status: needs-triage"
+    color: "f9d0c4"
+    description: "Needs initial review and prioritization"
+
+  - name: "status: blocked"
+    color: "b60205"
+    description: "Blocked by external dependency"
+
+  - name: "status: in-progress"
+    color: "fbca04"
+    description: "Currently being worked on"
+
+  - name: "status: needs-review"
+    color: "0e8a16"
+    description: "Ready for review"
+
+  - name: "status: waiting-for-feedback"
+    color: "d4c5f9"
+    description: "Waiting for feedback from submitter"
+
+  # Special labels
+  - name: "good first issue"
+    color: "7057ff"
+    description: "Good for newcomers"
+
+  - name: "help wanted"
+    color: "159818"
+    description: "Community help is welcome"
+
+  - name: "breaking change"
+    color: "d93f0b"
+    description: "This change breaks backward compatibility"
+
+  - name: "dependencies"
+    color: "0366d6"
+    description: "Dependency updates"
+
+  - name: "automated"
+    color: "ededed"
+    description: "Automated changes (e.g., from bots)"
+
+# Collaborators and teams (adjust as needed)
+collaborators: []
+
+teams: []
+
+# Milestones
+milestones:
+  - title: "v1.0.0 - Initial Release"
+    description: "First stable release with core database functionality"
+    state: "open"
+
+  - title: "v1.1.0 - Enhanced Monitoring"
+    description: "Comprehensive monitoring and observability features"
+    state: "open"
+
+  - title: "v1.2.0 - Performance Optimization"
+    description: "Database performance improvements and optimization"
+    state: "open"
+
+  - title: "v2.0.0 - Advanced Features"
+    description: "Advanced recipe management features and API"
+    state: "open"

@@ -1,0 +1,365 @@
+name: 🔒 Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql-analysis:
+    name: 🔍 CodeQL Analysis
+    runs-on: ubuntu-latest
+    if:
+      github.event_name != 'schedule' || github.repository_owner ==
+      'your-username'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["python"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+
+  dependency-scanning:
+    name: 🔍 Dependency Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f python/requirements.txt ]; then
+            pip install -r python/requirements.txt
+            pip install safety bandit
+          fi
+
+      - name: Run Safety (Python dependency security)
+        if: hashFiles('python/requirements*.txt') != ''
+        run: |
+          safety check --json --output safety-report.json || true
+          if [ -f safety-report.json ]; then
+            python -c "
+              import json
+              import sys
+              try:
+                  with open('safety-report.json', 'r') as f:
+                      data = json.load(f)
+                  if data.get('vulnerabilities'):
+                      print('🚨 Security vulnerabilities found in Python dependencies:')
+                      for vuln in data['vulnerabilities']:
+                          print(f'  - {vuln[\"package_name\"]} {vuln[\"installed_version\"]}: {vuln[\"advisory\"]}')
+                      sys.exit(1)
+                  else:
+                      print('✅ No security vulnerabilities found in Python dependencies')
+              except Exception as e:
+                  print(f'⚠️  Could not parse safety report: {e}')
+            "
+
+      - name: Run Bandit (Python security linter)
+        if: hashFiles('python/**/*.py') != ''
+        run: |
+          bandit -r python/ -f json -o bandit-report.json || true
+          if [ -f bandit-report.json ]; then
+            python -c "
+              import json
+              import sys
+              try:
+                  with open('bandit-report.json', 'r') as f:
+                      data = json.load(f)
+                  issues = data.get('results', [])
+                  if issues:
+                      high_severity = [i for i in issues if i['issue_severity'] == 'HIGH']
+                      medium_severity = [i for i in issues if i['issue_severity'] == 'MEDIUM']
+
+                      print(f'🔍 Bandit found {len(issues)} security issues:')
+                      print(f'  - High severity: {len(high_severity)}')
+                      print(f'  - Medium severity: {len(medium_severity)}')
+
+                      if high_severity:
+                          print('🚨 High severity issues:')
+                          for issue in high_severity[:5]:  # Show first 5
+                              print(f'  - {issue[\"filename\"]}:{issue[\"line_number\"]} - {issue[\"issue_text\"]}')
+                          if len(high_severity) > 1:
+                              sys.exit(1)
+                  else:
+                      print('✅ No security issues found by Bandit')
+              except Exception as e:
+                  print(f'⚠️  Could not parse bandit report: {e}')
+            "
+
+  secret-scanning:
+    name: 🔐 Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install detect-secrets
+        run: |
+          pip install detect-secrets
+
+      - name: Run detect-secrets scan
+        run: |
+          # Initialize baseline if it doesn't exist
+          if [ ! -f .secrets.baseline ]; then
+            detect-secrets scan --baseline .secrets.baseline
+          fi
+
+          # Scan for new secrets
+          detect-secrets scan --baseline .secrets.baseline --exclude-files '.*\.lock$' --exclude-files '.*\.patch$'
+
+          # Check if any new secrets were found
+          if detect-secrets audit .secrets.baseline --report --fail-on-unaudited; then
+            echo "✅ No new secrets detected"
+          else
+            echo "🚨 New secrets detected! Please review .secrets.baseline"
+            exit 1
+          fi
+
+      - name: Upload secrets baseline
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: secrets-baseline
+          path: .secrets.baseline
+
+  container-scanning:
+    name: 🐳 Container Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract PostgreSQL image from manifests
+        id: extract-images
+        run: |
+          # Extract image references from Kubernetes manifests
+          POSTGRES_IMAGE=$(grep -r "postgres:" k8s/ | head -1 | sed 's/.*image: *//' | sed 's/ *$//')
+          POSTGRES_EXPORTER_IMAGE=$(grep -r "postgres-exporter" k8s/ | head -1 | sed 's/.*image: *//' | sed 's/ *$//')
+
+          echo "postgres-image=$POSTGRES_IMAGE" >> $GITHUB_OUTPUT
+          echo "postgres-exporter-image=$POSTGRES_EXPORTER_IMAGE" >> $GITHUB_OUTPUT
+
+          echo "Found images:"
+          echo "  PostgreSQL: $POSTGRES_IMAGE"
+          echo "  Postgres Exporter: $POSTGRES_EXPORTER_IMAGE"
+
+      - name: Run Trivy vulnerability scanner on PostgreSQL
+        uses: aquasecurity/trivy-action@master
+        if: steps.extract-images.outputs.postgres-image != ''
+        with:
+          image-ref: ${{ steps.extract-images.outputs.postgres-image }}
+          format: "sarif"
+          output: "trivy-postgres-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Run Trivy vulnerability scanner on Postgres Exporter
+        uses: aquasecurity/trivy-action@master
+        if: steps.extract-images.outputs.postgres-exporter-image != ''
+        with:
+          image-ref: ${{ steps.extract-images.outputs.postgres-exporter-image }}
+          format: "sarif"
+          output: "trivy-exporter-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-postgres-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-exporter-results.sarif"
+
+  kubernetes-security:
+    name: ☸️ Kubernetes Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install kubesec
+        run: |
+          curl -sSL https://github.com/controlplaneio/kubesec/releases/latest/download/kubesec_linux_amd64.tar.gz | tar xz
+          sudo mv kubesec /usr/local/bin/
+
+      - name: Install kube-score
+        run: |
+          curl -sSL https://github.com/zegl/kube-score/releases/latest/download/kube-score_linux_amd64.tar.gz | tar xz
+          sudo mv kube-score /usr/local/bin/
+
+      - name: Scan Kubernetes manifests with kubesec
+        run: |
+          echo "🔍 Scanning Kubernetes manifests with kubesec..."
+          EXIT_CODE=0
+
+          for manifest in k8s/*.yaml; do
+            if [ -f "$manifest" ]; then
+              echo "Scanning $manifest..."
+              RESULT=$(kubesec scan "$manifest")
+              SCORE=$(echo "$RESULT" | jq -r '.[0].score // 0')
+
+              echo "Score for $manifest: $SCORE"
+
+              if [ "$SCORE" -lt 5 ]; then
+                echo "⚠️  Low security score for $manifest"
+                echo "$RESULT" | jq -r '.[0].advise[]?.reason // empty' | head -5
+                EXIT_CODE=1
+              fi
+            fi
+          done
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ All Kubernetes manifests passed security scanning"
+          else
+            echo "🚨 Some Kubernetes manifests have security issues"
+          fi
+
+          exit $EXIT_CODE
+
+      - name: Scan with kube-score
+        run: |
+          echo "🔍 Scanning Kubernetes manifests with kube-score..."
+
+          for manifest in k8s/*.yaml; do
+            if [ -f "$manifest" ]; then
+              echo "Scanning $manifest..."
+              kube-score score "$manifest" --ignore-test pod-networkpolicy --ignore-test pod-probes || true
+            fi
+          done
+
+  infrastructure-scanning:
+    name: 🏗️ Infrastructure Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install tfsec (for future Terraform files)
+        run: |
+          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+
+      - name: Scan shell scripts with shellcheck
+        run: |
+          # Install shellcheck if not available
+          sudo apt-get update && sudo apt-get install -y shellcheck
+
+          echo "🔍 Scanning shell scripts..."
+          find scripts/ -name "*.sh" -type f | while read -r script; do
+            echo "Scanning $script..."
+            shellcheck "$script" -f gcc || echo "⚠️  Issues found in $script"
+          done
+
+      - name: Check for hardcoded secrets in scripts
+        run: |
+          echo "🔍 Checking for hardcoded secrets in scripts..."
+
+          # Common patterns for secrets
+          PATTERNS=(
+            "password\s*=\s*['\"][^'\"]{8,}"
+            "secret\s*=\s*['\"][^'\"]{8,}"
+            "token\s*=\s*['\"][^'\"]{8,}"
+            "key\s*=\s*['\"][^'\"]{8,}"
+            "api[_-]?key\s*=\s*['\"][^'\"]{8,}"
+          )
+
+          EXIT_CODE=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -r -i -E "$pattern" scripts/ --include="*.sh"; then
+              echo "🚨 Potential hardcoded secret found!"
+              EXIT_CODE=1
+            fi
+          done
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ No hardcoded secrets found in scripts"
+          fi
+
+          exit $EXIT_CODE
+
+  security-summary:
+    name: 📊 Security Summary
+    runs-on: ubuntu-latest
+    needs:
+      [
+        dependency-scanning,
+        secret-scanning,
+        container-scanning,
+        kubernetes-security,
+        infrastructure-scanning,
+      ]
+    if: always()
+
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scanning | ${{ needs.dependency-scanning.result == 'success' && '✅ Pass' || '❌ Fail' }} | Python packages scanned for vulnerabilities |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scanning.result == 'success' && '✅ Pass' || '❌ Fail' }} | Repository scanned for exposed secrets |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Scanning | ${{ needs.container-scanning.result == 'success' && '✅ Pass' || '❌ Fail' }} | Docker images scanned for CVEs |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kubernetes Security | ${{ needs.kubernetes-security.result == 'success' && '✅ Pass' || '❌ Fail' }} | K8s manifests scanned for misconfigurations |" >> $GITHUB_STEP_SUMMARY
+          echo "| Infrastructure Security | ${{ needs.infrastructure-scanning.result == 'success' && '✅ Pass' || '❌ Fail' }} | Scripts and infrastructure scanned |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          FAILED_JOBS=0
+          if [[ "${{ needs.dependency-scanning.result }}" != "success" ]]; then ((FAILED_JOBS++)); fi
+          if [[ "${{ needs.secret-scanning.result }}" != "success" ]]; then ((FAILED_JOBS++)); fi
+          if [[ "${{ needs.container-scanning.result }}" != "success" ]]; then ((FAILED_JOBS++)); fi
+          if [[ "${{ needs.kubernetes-security.result }}" != "success" ]]; then ((FAILED_JOBS++)); fi
+          if [[ "${{ needs.infrastructure-scanning.result }}" != "success" ]]; then ((FAILED_JOBS++)); fi
+
+          if [ $FAILED_JOBS -eq 0 ]; then
+            echo "## 🎉 All security scans passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ⚠️  $FAILED_JOBS security scan(s) failed" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the failed jobs and address any security issues." >> $GITHUB_STEP_SUMMARY
+          fi

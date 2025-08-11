@@ -1,0 +1,269 @@
+{
+  "info": {
+    "name": "Recipe Database - Monitoring & Management",
+    "description": "Postman collection for monitoring and managing the Recipe Database PostgreSQL system. Includes metrics endpoints, health checks, and database management queries.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "localhost",
+      "description": "Base URL for the database service (use with port forwarding)"
+    },
+    {
+      "key": "metrics_port",
+      "value": "9187",
+      "description": "Port for postgres_exporter metrics endpoint"
+    },
+    {
+      "key": "postgres_port",
+      "value": "5432",
+      "description": "Port for PostgreSQL database"
+    },
+    {
+      "key": "namespace",
+      "value": "recipe-database",
+      "description": "Kubernetes namespace"
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Monitoring Endpoints",
+      "description": "Endpoints for monitoring database metrics and health",
+      "item": [
+        {
+          "name": "PostgreSQL Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain",
+                "description": "Prometheus metrics format"
+              }
+            ],
+            "url": {
+              "raw": "http://{{base_url}}:{{metrics_port}}/metrics",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{metrics_port}}",
+              "path": ["metrics"]
+            },
+            "description": "Fetch all PostgreSQL metrics from postgres_exporter including:\n- Standard PostgreSQL metrics (connections, queries, cache hits)\n- Custom recipe-specific business metrics\n- Database performance metrics\n- Table size and growth metrics\n\n**Setup required:**\n1. Port forward: `kubectl port-forward -n recipe-database svc/recipe-database-service 9187:9187`\n2. Ensure postgres_exporter is running"
+          },
+          "response": []
+        },
+        {
+          "name": "Custom Recipe Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": {
+              "raw": "http://{{base_url}}:{{metrics_port}}/metrics",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{metrics_port}}",
+              "path": ["metrics"],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "recipe_",
+                  "description": "Filter for recipe-specific metrics",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Same as PostgreSQL Metrics but focused on custom recipe metrics:\n- recipe_stats_total_recipes\n- recipe_stats_users_with_recipes  \n- recipe_stats_avg_recipe_lifetime_seconds\n- user_activity_active_recipe_creators\n- user_activity_active_reviewers\n- user_activity_active_favoriters\n\nNote: Prometheus format doesn't support server-side filtering. Use this request to document recipe-specific metrics."
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://{{base_url}}:{{metrics_port}}/",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{metrics_port}}",
+              "path": [""]
+            },
+            "description": "Basic health check for postgres_exporter service. Should return a simple page indicating the service is running."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Database Management",
+      "description": "Direct database queries for management and troubleshooting",
+      "item": [
+        {
+          "name": "Database Connection Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT 'database_accessible' AS health_check, CASE WHEN COUNT(*) >= 0 THEN 'OK' ELSE 'ERROR' END AS status FROM recipe_manager.recipes LIMIT 1;\"\n}"
+            },
+            "url": {
+              "raw": "http://{{base_url}}:{{postgres_port}}/",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{postgres_port}}",
+              "path": [""]
+            },
+            "description": "Test database connectivity and basic query execution.\n\n**Note:** This is a conceptual request. PostgreSQL doesn't have a built-in HTTP API. Use this with a PostgreSQL HTTP proxy like PostgREST, or execute via:\n- `kubectl exec` into the pod\n- `psql` command line\n- Database management tools like pgAdmin\n\n**Alternative command:**\n```bash\nkubectl exec -n recipe-database deployment/recipe-database -c recipe-database -- psql -U $DB_MAINT_USER -d $POSTGRES_DB -c \"SELECT 'database_accessible' AS health_check, 'OK' AS status;\"\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Long Running Queries",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT pid, state, query, EXTRACT(EPOCH FROM (NOW() - query_start)) AS duration_seconds FROM pg_stat_activity WHERE state = 'active' AND query_start < NOW() - INTERVAL '30 seconds' AND query NOT LIKE '%pg_stat_activity%' ORDER BY duration_seconds DESC;\"\n}"
+            },
+            "url": {
+              "raw": "http://{{base_url}}:{{postgres_port}}/",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{postgres_port}}",
+              "path": [""]
+            },
+            "description": "Check for long-running queries that might be causing performance issues.\n\n**Alternative kubectl command:**\n```bash\nkubectl exec -n recipe-database deployment/recipe-database -c recipe-database -- psql -U $DB_MAINT_USER -d $POSTGRES_DB -f /app/db/queries/monitoring/health_checks.sql\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Table Sizes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT schemaname, tablename, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size, pg_total_relation_size(schemaname||'.'||tablename) as size_bytes FROM pg_tables WHERE schemaname = 'recipe_manager' ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;\"\n}"
+            },
+            "url": {
+              "raw": "http://{{base_url}}:{{postgres_port}}/",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{postgres_port}}",
+              "path": [""]
+            },
+            "description": "Get table sizes for the recipe_manager schema to monitor growth and identify large tables."
+          },
+          "response": []
+        },
+        {
+          "name": "Recipe Statistics",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT COUNT(*) as total_recipes, COUNT(DISTINCT user_id) as unique_authors, AVG(CASE WHEN rating_count > 0 THEN rating_average ELSE NULL END) as avg_rating FROM recipe_manager.recipes;\"\n}"
+            },
+            "url": {
+              "raw": "http://{{base_url}}:{{postgres_port}}/",
+              "protocol": "http",
+              "host": ["{{base_url}}"],
+              "port": "{{postgres_port}}",
+              "path": [""]
+            },
+            "description": "Get overall recipe statistics including total count, unique authors, and average rating."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Kubernetes Operations",
+      "description": "Helper requests for Kubernetes operations (informational)",
+      "item": [
+        {
+          "name": "Port Forward Commands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/info",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["info"]
+            },
+            "description": "This is an informational request. The actual commands to set up port forwarding:\n\n**PostgreSQL Metrics:**\n```bash\nkubectl port-forward -n recipe-database svc/recipe-database-service 9187:9187\n```\n\n**PostgreSQL Database:**\n```bash\nkubectl port-forward -n recipe-database svc/recipe-database-service 5432:5432\n```\n\n**Check Service Status:**\n```bash\n./scripts/containerManagement/get-container-status.sh\n./scripts/containerManagement/get-supporting-services-status.sh\n```\n\n**View Logs:**\n```bash\nkubectl logs -n recipe-database deployment/recipe-database -c recipe-database --tail=100\nkubectl logs -n recipe-database deployment/recipe-database -c postgres-exporter --tail=50\n```"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pre-request script to validate environment",
+          "if (!pm.variables.get('base_url')) {",
+          "    pm.variables.set('base_url', 'localhost');",
+          "}",
+          "",
+          "// Set dynamic timestamp for queries that need it",
+          "pm.variables.set('timestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Status code should be 200 or connection-related', function () {",
+          "    pm.expect([200, 404, 503]).to.include(pm.response.code);",
+          "});",
+          "",
+          "// Log response time",
+          "pm.test('Response time is reasonable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(30000);",
+          "});"
+        ]
+      }
+    }
+  ]
+}

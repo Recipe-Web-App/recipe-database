@@ -18,7 +18,7 @@ FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
@@ -94,6 +94,7 @@ if [ -f .env ]; then
   BEFORE_ENV=$(mktemp)
   AFTER_ENV=$(mktemp)
   env | cut -d= -f1 | sort > "$BEFORE_ENV"
+  # shellcheck disable=SC1091
   source .env
   # Capture env after
   env | cut -d= -f1 | sort > "$AFTER_ENV"

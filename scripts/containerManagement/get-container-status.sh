@@ -15,7 +15,7 @@ MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH}"
 COLUMNS=$(tput cols 2>/dev/null || echo 80)
 
 # Utility function for printing section separators
-print_separator() {
+function print_separator() {
   local char="${1:-=}"
   local width="${COLUMNS:-80}"
   printf '%*s\n' "$width" '' | tr ' ' "$char"
