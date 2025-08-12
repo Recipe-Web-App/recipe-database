@@ -17,6 +17,22 @@ LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 JOB_NAME="db-load-test-fixtures-job"
 NAMESPACE="recipe-database"
 YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-load-test-fixtures-job.yaml"
+MOUNT_PATH="/mnt/recipe-database"
+MOUNT_PORT=8787
+MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH} --port=${MOUNT_PORT}"
+
+print_separator "="
+echo "🔗 Ensuring Minikube mount is available..."
+print_separator "-"
+
+if ! pgrep -f "$MOUNT_CMD" > /dev/null; then
+  echo "🔗 Starting Minikube mount on port ${MOUNT_PORT}..."
+  nohup minikube mount "${LOCAL_PATH}:${MOUNT_PATH}" --port="${MOUNT_PORT}" > /tmp/minikube-mount.log 2>&1 &
+  echo "⏳ Waiting for Minikube mount to be ready..."
+  sleep 5
+else
+  echo "✅ Minikube mount already running on port ${MOUNT_PORT}."
+fi
 
 print_separator "="
 echo "🚀 Applying load database test fixtures job..."

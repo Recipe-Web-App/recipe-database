@@ -9,7 +9,7 @@ INSERT INTO recipe_manager.meal_plans (
   updated_at
 )
 VALUES (
-  DEFAULT,
+  1,
   '11111111-1111-1111-1111-111111111111',
   'Weekend Brunch',
   '2025-06-01',

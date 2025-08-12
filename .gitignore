@@ -1,3 +1,4 @@
+# Env data
 *.env*
 !.env.example
 
@@ -9,9 +10,12 @@ __pycache__/
 .venv/
 venv/
 
+# Data backups, exports & imports
 db/data/*/*
 !db/data/*/.gitkeep
 
+# tmp dir
 tmp/
 
+# pre-commit caches
 node_modules/
