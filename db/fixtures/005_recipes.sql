@@ -13,7 +13,7 @@ INSERT INTO recipe_manager.recipes (
   updated_at
 )
 VALUES (
-  DEFAULT,
+  1,
   '11111111-1111-1111-1111-111111111111',
   'Classic Pancakes',
   'Fluffy homemade pancakes.',
@@ -26,7 +26,7 @@ VALUES (
   NOW()
 ),
 (
-  DEFAULT,
+  2,
   '22222222-2222-2222-2222-222222222222',
   'Spaghetti Carbonara',
   'Rich Italian pasta dish.',
