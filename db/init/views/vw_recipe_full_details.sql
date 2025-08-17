@@ -10,6 +10,7 @@ SELECT
   r.difficulty,
   i.ingredient_id,
   i.name AS ingredient_name,
+  i.comments AS ingredient_comments,
   ri.quantity,
   ri.unit,
   ri.is_optional,

@@ -4,7 +4,8 @@ SELECT
   r.title,
   ri.quantity,
   ri.unit,
-  i.name
+  i.name,
+  i.comments
 FROM recipe_manager.recipes AS r
 INNER JOIN recipe_manager.recipe_ingredients AS ri ON r.recipe_id = ri.recipe_id
 INNER JOIN recipe_manager.ingredients AS i ON ri.ingredient_id = i.ingredient_id
