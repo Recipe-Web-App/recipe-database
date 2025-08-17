@@ -20,5 +20,3 @@ CREATE TABLE IF NOT EXISTS recipe_manager.user_privacy_preferences (
 
 CREATE INDEX IF NOT EXISTS idx_user_privacy_preferences_user_id
 ON recipe_manager.user_privacy_preferences (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_privacy_preferences_key
-ON recipe_manager.user_privacy_preferences (privacy_key);

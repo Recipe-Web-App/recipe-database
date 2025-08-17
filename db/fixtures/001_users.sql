@@ -34,4 +34,4 @@ VALUES (
   TRUE,
   NOW(),
   NOW()
-);
+) ON CONFLICT (user_id) DO NOTHING;

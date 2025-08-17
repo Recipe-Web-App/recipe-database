@@ -1,6 +1,5 @@
 -- db/fixtures/013_meal_plans.sql
 INSERT INTO recipe_manager.meal_plans (
-  meal_plan_id,
   user_id,
   name,
   start_date,
@@ -9,11 +8,10 @@ INSERT INTO recipe_manager.meal_plans (
   updated_at
 )
 VALUES (
-  1,
   '11111111-1111-1111-1111-111111111111',
   'Weekend Brunch',
   '2025-06-01',
   '2025-06-02',
   NOW(),
   NOW()
-);
+) ON CONFLICT (user_id, name) DO NOTHING;

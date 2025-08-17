@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS nutritional_info (
 CREATE TRIGGER nutritional_info_updated_at
 BEFORE UPDATE ON nutritional_info
 FOR EACH ROW
-EXECUTE FUNCTION update_timestamp();
+EXECUTE FUNCTION recipe_manager.update_timestamp();
 
 -- Add comments for documentation
 COMMENT ON TABLE nutritional_info
