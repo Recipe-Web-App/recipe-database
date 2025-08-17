@@ -5,9 +5,9 @@
 
 DO $$
 DECLARE
-    monitoring_user_name TEXT := '__MONITORING_USER__';
-    monitoring_password TEXT := '__MONITORING_PASSWORD__';
-    target_database TEXT := '__POSTGRES_DB__';
+    monitoring_user_name TEXT := '${MONITORING_USER}';
+    monitoring_password TEXT := '${MONITORING_PASSWORD}';
+    target_database TEXT := '${POSTGRES_DB}';
 BEGIN
     -- Create monitoring user with limited privileges
     EXECUTE format('CREATE USER %I WITH PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN',

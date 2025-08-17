@@ -1,7 +1,6 @@
 -- db/fixtures/004_ingredients.sql
-INSERT INTO recipe_manager.ingredients (ingredient_id, name, description, is_optional, created_at, updated_at)
+INSERT INTO recipe_manager.ingredients (name, description, is_optional, created_at, updated_at)
 VALUES (
-  1,
   'Sugar',
   'Sweet granulated sugar',
   FALSE,
@@ -9,7 +8,6 @@ VALUES (
   NOW()
 ),
 (
-  2,
   'Salt',
   'Fine sea salt',
   FALSE,
@@ -17,10 +15,9 @@ VALUES (
   NOW()
 ),
 (
-  3,
   'Flour',
   'All-purpose wheat flour',
   FALSE,
   NOW(),
   NOW()
-);
+) ON CONFLICT (name) DO NOTHING;

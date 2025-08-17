@@ -1,6 +1,5 @@
 -- db/fixtures/005_recipes.sql
 INSERT INTO recipe_manager.recipes (
-  recipe_id,
   user_id,
   title,
   description,
@@ -13,7 +12,6 @@ INSERT INTO recipe_manager.recipes (
   updated_at
 )
 VALUES (
-  1,
   '11111111-1111-1111-1111-111111111111',
   'Classic Pancakes',
   'Fluffy homemade pancakes.',
@@ -26,7 +24,6 @@ VALUES (
   NOW()
 ),
 (
-  2,
   '22222222-2222-2222-2222-222222222222',
   'Spaghetti Carbonara',
   'Rich Italian pasta dish.',
@@ -37,4 +34,4 @@ VALUES (
   'https://example.com/spaghetti-carbonara',
   NOW(),
   NOW()
-);
+) ON CONFLICT (title) DO NOTHING;
