@@ -5,7 +5,15 @@ RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = now();
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
--- Trigger
+-- Triggers
 CREATE TRIGGER set_recipes_updated_at BEFORE
 UPDATE ON recipe_manager.recipes FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.set_updated_at();
+
+CREATE TRIGGER set_ingredient_comments_updated_at BEFORE
+UPDATE ON recipe_manager.ingredient_comments FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.set_updated_at();
+
+CREATE TRIGGER set_step_comments_updated_at BEFORE
+UPDATE ON recipe_manager.step_comments FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();
