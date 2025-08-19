@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: postgres-exporter
-          image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
           imagePullPolicy: Always
           securityContext:
             runAsNonRoot: true
