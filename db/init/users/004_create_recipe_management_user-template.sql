@@ -1,4 +1,4 @@
--- db/init/users/003_create_RECIPE_MANAGEMENT_user-template.sql
+-- db/init/users/004_create_recipe_management_user-template.sql
 
 DO
 $$
