@@ -106,6 +106,16 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: MEDIA_MANAGEMENT_PASSWORD
+            - name: MEAL_PLAN_MANAGEMENT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: recipe-database-config
+                  key: MEAL_PLAN_MANAGEMENT_USER
+            - name: MEAL_PLAN_MANAGEMENT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipe-database-secret
+                  key: MEAL_PLAN_MANAGEMENT_PASSWORD
           volumeMounts:
             - name: sql-volume
               mountPath: /app/sql
