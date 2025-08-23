@@ -138,3 +138,13 @@ DO $$ BEGIN CREATE TYPE recipe_manager.user_role_enum AS ENUM (
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
+-- Enum for media MIME types (images, videos, plus fallback)
+DO $$ BEGIN CREATE TYPE recipe_manager.media_type_enum AS ENUM (
+  -- Image Formats
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp','image/avif', 'image/svg+xml', 'image/heic', 'image/tiff',
+  -- Video Formats
+  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
