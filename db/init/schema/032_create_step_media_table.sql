@@ -1,4 +1,4 @@
--- db/init/schema/031_create_step_media_table.sql
+-- db/init/schema/032_create_step_media_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.step_media (
   recipe_id BIGINT NOT NULL REFERENCES recipe_manager.recipes (
     recipe_id
