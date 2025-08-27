@@ -150,7 +150,7 @@ WHEN duplicate_object THEN null;
 END $$;
 -- Enum for media processing status
 DO $$ BEGIN CREATE TYPE recipe_manager.processing_status_enum AS ENUM (
-  'PENDING', 'PROCESSING', 'COMPLETE', 'FAILED'
+  'INITIATED', 'UPLOADING', 'PROCESSING', 'COMPLETE', 'FAILED', 'EXPIRED'
 );
 EXCEPTION
 WHEN duplicate_object THEN null;
