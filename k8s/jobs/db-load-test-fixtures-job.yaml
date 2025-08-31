@@ -15,7 +15,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: db-load-test-fixtures
-          image: recipe-database:latest
+          image: recipe-database-jobs:latest
           imagePullPolicy: Never
           securityContext:
             runAsNonRoot: true
@@ -66,20 +66,6 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: DB_MAINT_PASSWORD
-          volumeMounts:
-            - name: sql-volume
-              mountPath: /app/sql
-            - name: scripts-volume
-              mountPath: /app/scripts
           command:
             ["bash", "-c", "/app/scripts/jobHelpers/db-load-test-fixtures.sh"]
-      volumes:
-        - name: sql-volume
-          hostPath:
-            path: /mnt/recipe-database/db
-            type: Directory
-        - name: scripts-volume
-          hostPath:
-            path: /mnt/recipe-database/scripts
-            type: Directory
   backoffLimit: 1

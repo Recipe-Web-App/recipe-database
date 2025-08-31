@@ -4,9 +4,6 @@
 set -euo pipefail
 
 NAMESPACE="recipe-database"
-MOUNT_PATH="/mnt/recipe-database"
-LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH}"
 IMAGE_NAME="recipe-database"
 IMAGE_TAG="latest"
 FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"

@@ -7,9 +7,6 @@ NAMESPACE="recipe-database"
 DEPLOYMENT="postgres-deployment"
 SERVICE="postgres-service"
 JOB="db-load-schema-job"
-MOUNT_PATH="/mnt/recipe-database"
-LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-MOUNT_CMD="minikube mount ${LOCAL_PATH}:${MOUNT_PATH}"
 
 # Fixes bug where first separator line does not fill the terminal width
 COLUMNS=$(tput cols 2>/dev/null || echo 80)

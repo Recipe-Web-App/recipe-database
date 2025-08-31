@@ -14,7 +14,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: restore-nutritional-data
-          image: recipe-database:latest
+          image: recipe-database-jobs:latest
           imagePullPolicy: Never
           securityContext:
             runAsNonRoot: true
@@ -66,30 +66,7 @@ spec:
               value: "${BACKUP_DATE}"
             - name: RESTORE_OPTIONS
               value: "${RESTORE_OPTIONS}"
-          volumeMounts:
-            - name: backups-dir
-              mountPath: /app/db/data/backups
-              readOnly: true
-            - name: exports-dir
-              mountPath: /app/db/data/exports
-              readOnly: true
-            - name: scripts-dir
-              mountPath: /app/scripts
-              readOnly: true
           command:
             - /bin/bash
             - /app/scripts/jobHelpers/db-restore-nutritional-data.sh
-      volumes:
-        - name: backups-dir
-          hostPath:
-            path: /mnt/recipe-database/db/data/backups
-            type: Directory
-        - name: exports-dir
-          hostPath:
-            path: /mnt/recipe-database/db/data/exports
-            type: Directory
-        - name: scripts-dir
-          hostPath:
-            path: /mnt/recipe-database/scripts
-            type: Directory
   backoffLimit: 1

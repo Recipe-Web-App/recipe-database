@@ -15,7 +15,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: db-load-schema
-          image: recipe-database:latest
+          image: recipe-database-jobs:latest
           imagePullPolicy: Never
           securityContext:
             runAsNonRoot: true
@@ -116,19 +116,5 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: MEAL_PLAN_MANAGEMENT_PASSWORD
-          volumeMounts:
-            - name: sql-volume
-              mountPath: /app/sql
-            - name: scripts-volume
-              mountPath: /app/scripts
           command: ["bash", "-c", "/app/scripts/jobHelpers/db-load-schema.sh"]
-      volumes:
-        - name: sql-volume
-          hostPath:
-            path: /mnt/recipe-database/db
-            type: Directory
-        - name: scripts-volume
-          hostPath:
-            path: /mnt/recipe-database/scripts
-            type: Directory
   backoffLimit: 1

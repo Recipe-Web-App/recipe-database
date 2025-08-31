@@ -44,7 +44,7 @@ spec:
               ephemeral-storage: "32Mi"
       containers:
         - name: db-import-nutritional-data
-          image: recipe-database:latest
+          image: recipe-database-jobs:latest
           imagePullPolicy: Never
           securityContext:
             runAsNonRoot: true
@@ -91,31 +91,11 @@ spec:
                   name: recipe-database-secret
                   key: DB_MAINT_PASSWORD
             - name: IMPORT_DATA_DIR
-              value: "/app/data"
-          volumeMounts:
-            - name: data-volume
-              mountPath: /app/data
-            - name: python-volume
-              mountPath: /app/python
-            - name: scripts-volume
-              mountPath: /app/scripts
+              value: "/app/sql/data/imports"
           command:
             [
               "bash",
               "-c",
               "/app/scripts/jobHelpers/db-import-nutritional-data.sh",
             ]
-      volumes:
-        - name: data-volume
-          hostPath:
-            path: /mnt/recipe-database/db/data/imports
-            type: Directory
-        - name: python-volume
-          hostPath:
-            path: /mnt/recipe-database/python
-            type: Directory
-        - name: scripts-volume
-          hostPath:
-            path: /mnt/recipe-database/scripts
-            type: Directory
   backoffLimit: 1
