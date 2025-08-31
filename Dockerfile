@@ -1,4 +1,5 @@
-FROM postgres:15.4
+# Stage 1: Main database image
+FROM postgres:15.4 AS database
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,3 +16,13 @@ ENV LC_ALL=C.UTF-8
 
 # Create app directory for Python scripts
 RUN mkdir -p /app
+
+# Stage 2: Job runner image (extends main database image)
+FROM database AS jobs
+
+# Copy database files and scripts for job operations
+COPY db/ /app/sql/
+COPY scripts/ /app/scripts/
+
+# Set working directory
+WORKDIR /app

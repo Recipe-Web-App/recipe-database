@@ -18,6 +18,7 @@ JOB_NAME="db-import-nutritional-data-job"
 NAMESPACE="recipe-database"
 YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-import-nutritional-data-job.yaml"
 
+
 # Configuration
 OPENFOODFACTS_URL="https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz"
 LOCAL_DATA_DIR="${LOCAL_PATH}/db/data/imports"

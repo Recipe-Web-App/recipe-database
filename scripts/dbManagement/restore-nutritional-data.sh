@@ -25,6 +25,7 @@ JOB_NAME="db-restore-nutritional-data-job"
 NAMESPACE="recipe-database"
 YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-restore-nutritional-data-job.yaml"
 
+
 # Set backup directories
 BACKUP_DIR="${LOCAL_PATH}/db/data/backups"
 EXPORT_DIR="${LOCAL_PATH}/db/data/exports"
