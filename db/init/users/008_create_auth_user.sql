@@ -1,0 +1,30 @@
+-- db/init/users/008_create_auth_user.sql
+
+DO
+$$
+BEGIN
+  IF NOT EXISTS (
+    SELECT FROM pg_catalog.pg_roles WHERE rolname = '$AUTH_USER'
+  ) THEN
+    EXECUTE format(
+      'CREATE USER %I WITH PASSWORD %L',
+      '$AUTH_USER',
+      '$AUTH_PASSWORD'
+    );
+  END IF;
+END
+$$;
+
+DO
+$$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE recipe_database TO %I;', '$AUTH_USER');
+  EXECUTE format('GRANT USAGE ON SCHEMA recipe_manager TO %I;', '$AUTH_USER');
+  EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA recipe_manager TO %I;', '$AUTH_USER');
+  EXECUTE format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA recipe_manager TO %I;', '$AUTH_USER');
+  EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA recipe_manager TO %I;', '$AUTH_USER');
+  EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA recipe_manager GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I;', '$AUTH_USER');
+  EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA recipe_manager GRANT USAGE, SELECT ON SEQUENCES TO %I;', '$AUTH_USER');
+  EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA recipe_manager GRANT EXECUTE ON FUNCTIONS TO %I;', '$AUTH_USER');
+END
+$$;

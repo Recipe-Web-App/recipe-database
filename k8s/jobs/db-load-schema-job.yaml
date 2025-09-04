@@ -116,5 +116,15 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: MEAL_PLAN_MANAGEMENT_PASSWORD
+            - name: AUTH_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: recipe-database-config
+                  key: AUTH_USER
+            - name: AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipe-database-secret
+                  key: AUTH_PASSWORD
           command: ["bash", "-c", "/app/scripts/jobHelpers/db-load-schema.sh"]
   backoffLimit: 1
