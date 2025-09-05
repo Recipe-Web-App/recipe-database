@@ -59,17 +59,6 @@ print_separator "-"
 
 kubectl delete job db-import-nutritional-data-job -n "$NAMESPACE" --ignore-not-found
 
-print_separator "="
-echo "🔌 Checking for active Minikube mount..."
-print_separator "-"
-
-if pgrep -f "$MOUNT_CMD" > /dev/null; then
-  echo "🛑 Killing Minikube mount process..."
-  pkill -f "$MOUNT_CMD"
-  echo "✅ Minikube mount stopped."
-else
-  echo "ℹ️ No active Minikube mount found."
-fi
 
 print_separator "="
 read -r -p "⚠️ Do you want to delete the PersistentVolumeClaim (PVC)? This will delete all stored database data! (y/N): " del_pvc

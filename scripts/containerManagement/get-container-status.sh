@@ -66,13 +66,6 @@ print_separator "="
 echo "🔍 Checking PVCs in namespace '$NAMESPACE'..."
 kubectl get pvc -n "$NAMESPACE" || echo "❌ No PVCs found."
 
-print_separator "="
-echo "🔍 Checking Minikube mount status..."
-if pgrep -f "$MOUNT_CMD" > /dev/null; then
-  echo "✅ Mount is active: ${LOCAL_PATH} -> ${MOUNT_PATH}"
-else
-  echo "❌ Mount not active."
-fi
 
 print_separator "="
 echo "🔍 Checking kubectl proxy status..."
