@@ -179,7 +179,7 @@ for ordered execution:
 
 - `001_create_schema.sql` - Main schema creation
 - `002_create_enums.sql` - Enum definitions
-- `003-026_*.sql` - Table creation scripts (executed in numerical order)
+- `003-032_*.sql` - Table creation scripts (executed in numerical order)
 
 **Execution Order**: Files are executed alphabetically by name, so the numbering
 ensures proper dependency order (e.g., tables before foreign keys, enums before

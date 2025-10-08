@@ -38,7 +38,7 @@ The monitoring setup includes:
 
 #### Monitoring User
 
-- **File**: `db/init/users/005_create_monitoring_user-template.sql`
+- **File**: `db/init/users/005_create_monitoring_user.sql`
 - **Purpose**: Creates dedicated user for metrics collection
 - **Permissions**: Read-only access to system tables and recipe_manager schema
 
@@ -72,7 +72,7 @@ export MONITORING_PASSWORD="your_secure_password" <!-- pragma: allowlist secret 
 export POSTGRES_DB="your_database_name"
 
 # Apply the user creation script
-envsubst < db/init/users/005_create_monitoring_user-template.sql | kubectl exec -i your-postgres-pod -- psql
+envsubst < db/init/users/005_create_monitoring_user.sql | kubectl exec -i your-postgres-pod -- psql
 ```
 
 ### 2. Update Secret Configuration

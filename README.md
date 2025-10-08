@@ -309,7 +309,7 @@ curl http://localhost:9187/metrics
 
 | Component                 | Status      | Description                                         |
 | ------------------------- | ----------- | --------------------------------------------------- |
-| **Database Schema**       | ✅ Complete | 32 tables with comprehensive relationships          |
+| **Database Schema**       | ✅ Complete | 30 tables with comprehensive relationships          |
 | **Stored Functions**      | ✅ Complete | Recipe CRUD, rating aggregation, user management    |
 | **Database Triggers**     | ✅ Complete | Timestamp management, data validation, preferences  |
 | **Database Views**        | ✅ Complete | Recipe summaries, user favorites, top-rated recipes |
