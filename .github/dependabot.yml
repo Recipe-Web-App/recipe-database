@@ -6,59 +6,74 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "06:00"
+      time: "09:00"
+      timezone: "US/Eastern"
     open-pull-requests-limit: 100
     assignees:
-      - "jsamuelsen11"
+      - "jsamuelsen"
     commit-message:
       prefix: "ci"
       include: "scope"
     labels:
       - "dependencies"
       - "github-actions"
-      - "automated"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    rebase-strategy: auto
 
   # Docker dependencies in Kubernetes manifests
   - package-ecosystem: "docker"
     directory: "/k8s"
     schedule:
       interval: "weekly"
-      day: "tuesday"
-      time: "06:00"
+      day: "monday"
+      time: "09:00"
+      timezone: "US/Eastern"
     open-pull-requests-limit: 100
     assignees:
-      - "jsamuelsen11"
+      - "jsamuelsen"
     commit-message:
-      prefix: "build"
+      prefix: "docker"
       include: "scope"
     labels:
       - "dependencies"
       - "docker"
-      - "automated"
     ignore:
       # Ignore major version updates for PostgreSQL to avoid breaking changes
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
       - dependency-name: "quay.io/prometheuscommunity/postgres-exporter"
         update-types: ["version-update:semver-major"]
+    rebase-strategy: auto
 
   # Python dependencies
   - package-ecosystem: "pip"
     directory: "/python"
     schedule:
       interval: "weekly"
-      day: "wednesday"
-      time: "06:00"
+      day: "monday"
+      time: "09:00"
+      timezone: "US/Eastern"
     open-pull-requests-limit: 100
     assignees:
-      - "jsamuelsen11"
+      - "jsamuelsen"
     commit-message:
-      prefix: "build"
+      prefix: "deps"
       include: "scope"
     labels:
       - "dependencies"
       - "python"
-      - "automated"
+    groups:
+      python-patch-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+      python-minor-updates:
+        applies-to: version-updates
+        update-types:
+          - "minor"
     allow:
       - dependency-type: "direct"
       - dependency-type: "indirect"
@@ -70,21 +85,24 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "numpy"
         update-types: ["version-update:semver-major"]
+    versioning-strategy: increase
+    rebase-strategy: auto
 
   # Pre-commit hooks
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "thursday"
-      time: "06:00"
+      day: "monday"
+      time: "09:00"
+      timezone: "US/Eastern"
     open-pull-requests-limit: 100
     assignees:
-      - "jsamuelsen11"
+      - "jsamuelsen"
     commit-message:
       prefix: "ci"
       include: "scope"
     labels:
       - "dependencies"
       - "pre-commit"
-      - "automated"
+    rebase-strategy: auto

@@ -1,0 +1,46 @@
+---
+labels: [show-and-tell]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share how you're using the Recipe Database! Your implementations might help others.
+
+  - type: textarea
+    attributes:
+      label: What Did You Build?
+      description: Describe your implementation or use case
+      placeholder: Tell us about your project...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: How Are You Using the Database?
+      description: How does the recipe database fit into your architecture?
+      placeholder: |
+        - Schema extensions or customizations
+        - Integration details
+        - Data volume and scale
+        - Deployment setup
+        - Python processing workflows
+
+  - type: textarea
+    attributes:
+      label: Interesting Challenges or Solutions
+      description: Any interesting problems you solved or lessons learned?
+      placeholder:
+        Share your experience (query optimization, schema design, etc.)...
+
+  - type: textarea
+    attributes:
+      label: Screenshots or Demo
+      description: Show us what you built!
+      placeholder:
+        Links to screenshots, demos, schema diagrams, repositories, etc.
+
+  - type: textarea
+    attributes:
+      label: Feedback for the Project
+      description: Any feedback or suggestions based on your experience?
+      placeholder: What worked well? What could be improved?

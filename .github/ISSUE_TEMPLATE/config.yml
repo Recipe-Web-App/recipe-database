@@ -1,11 +1,13 @@
 blank_issues_enabled: false
 contact_links:
   - name: 💬 GitHub Discussions
-    url: https://github.com/your-username/recipe-database/discussions
+    url: https://github.com/Recipe-Web-App/recipe-database/discussions
     about: Ask questions, share ideas, and discuss with the community
   - name: 📚 Documentation
-    url: https://github.com/your-username/recipe-database/tree/main/docs
+    url: https://github.com/Recipe-Web-App/recipe-database/tree/main/docs
     about: Check our comprehensive documentation for setup and troubleshooting
   - name: 🔒 Security Issues
-    url: https://github.com/your-username/recipe-database/security/policy
-    about: Report security vulnerabilities privately (see SECURITY.md)
+    url: https://github.com/Recipe-Web-App/recipe-database/security/advisories/new
+    about:
+      Report security vulnerabilities privately through GitHub Security
+      Advisories

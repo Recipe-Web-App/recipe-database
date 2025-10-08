@@ -1,0 +1,211 @@
+---
+name: Performance Issue
+description: Report performance degradation or optimization opportunities
+title: "[Performance]: "
+labels: ["performance", "needs-triage"]
+assignees:
+  - jsamuelsen
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a performance issue! Detailed metrics will help us investigate and improve the database.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Performance Issue Description
+      description: Describe the performance problem you're experiencing
+      placeholder: A clear description of the performance issue
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which component has the performance issue?
+      options:
+        - Database Queries (SELECT/search)
+        - Database Writes (INSERT/UPDATE/DELETE)
+        - Database Functions/Procedures
+        - Database Views
+        - Database Indexes
+        - Python Data Processing
+        - Nutritional Data Import
+        - Container Startup/Restart
+        - Memory Usage
+        - CPU Usage
+        - Disk I/O
+        - Network I/O
+        - Monitoring/Metrics Collection
+        - Backup/Restore Operations
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Impact Severity
+      description: How severe is the performance impact?
+      options:
+        - Critical (Database unusable/timing out)
+        - High (Significant degradation affecting operations)
+        - Medium (Noticeable slowdown)
+        - Low (Minor optimization opportunity)
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Performance Metrics
+      description: Provide actual performance measurements
+      placeholder: |
+        Query execution times, throughput, latency, memory usage, etc.
+
+        Example:
+        - Query: SELECT * FROM recipe_manager.recipes WHERE...
+        - Current execution time: 5000ms
+        - Expected execution time: <100ms
+        - Rows scanned: 1M
+        - Memory usage: 4GB
+        - Connection count: 200
+    validations:
+      required: true
+
+  - type: textarea
+    id: query
+    attributes:
+      label: Slow Query (if applicable)
+      description: Include the actual SQL query causing issues
+      render: sql
+      placeholder: |
+        SELECT ...
+        FROM recipe_manager...
+        WHERE ...
+
+  - type: textarea
+    id: explain
+    attributes:
+      label: Query Plan (EXPLAIN ANALYZE)
+      description: Include EXPLAIN ANALYZE output for slow queries
+      render: text
+      placeholder: |
+        EXPLAIN ANALYZE output here...
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this performance issue?
+      placeholder: |
+        1. Load database with N records...
+        2. Execute query...
+        3. Observe execution time/resource usage
+        4. Issue appears when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: load
+    attributes:
+      label: Load Characteristics
+      description: Describe the data and load conditions
+      placeholder: |
+        - Database size:
+        - Table row counts:
+        - Concurrent connections:
+        - Query frequency:
+        - Data volume being processed:
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Information about your deployment environment
+      value: |
+        - PostgreSQL version:
+        - Kubernetes version:
+        - Container specs (CPU/RAM):
+        - Storage type (SSD/HDD):
+        - Python version (if data processing):
+        - OS:
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Relevant PostgreSQL configuration settings
+      placeholder: |
+        - shared_buffers:
+        - work_mem:
+        - effective_cache_size:
+        - max_connections:
+        - Connection pool settings:
+
+  - type: textarea
+    id: indexes
+    attributes:
+      label: Current Indexes
+      description: List relevant indexes on affected tables
+      placeholder: |
+        \d+ recipe_manager.recipes
+        (paste index information)
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Include database logs showing the performance issue
+      render: shell
+      placeholder: |
+        PostgreSQL logs, slow query log entries, container logs
+        (redact sensitive info)
+
+  - type: textarea
+    id: monitoring
+    attributes:
+      label: Monitoring Data
+      description: Prometheus metrics, Grafana graphs, or pg_stat data
+      placeholder: |
+        Screenshots of dashboards, pg_stat_statements output,
+        prometheus metrics, etc.
+
+  - type: textarea
+    id: analysis
+    attributes:
+      label: Initial Analysis
+      description: Any analysis you've done or patterns noticed
+      placeholder: |
+        Missing indexes, sequential scans, lock contention,
+        suspected causes, etc.
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround (if any)
+      description: Have you found any temporary workarounds?
+      placeholder: |
+        Added indexes, query rewrite, configuration changes,
+        connection pool tuning, etc.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm
+      options:
+        - label: I have included actual performance measurements
+          required: true
+        - label: I have provided query plan (EXPLAIN ANALYZE) if applicable
+          required: false
+        - label: I have checked existing indexes on affected tables
+          required: false
+        - label: I have searched for similar performance issues
+          required: true

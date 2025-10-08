@@ -1,0 +1,37 @@
+---
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share your ideas for new features or improvements to the Recipe Database!
+
+  - type: textarea
+    attributes:
+      label: Idea Description
+      description: Describe your idea
+      placeholder:
+        What would you like to see? (e.g., new table, function, monitoring
+        feature, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Problem or Use Case
+      description: What problem does this solve or what use case does it enable?
+      placeholder: This would help with...
+
+  - type: textarea
+    attributes:
+      label: Proposed Solution
+      description: How might this be implemented?
+      placeholder:
+        Any thoughts on SQL schema changes, Python scripts, Kubernetes configs,
+        etc.?
+
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Any additional information
+      placeholder: Links, examples, schema diagrams, etc.
