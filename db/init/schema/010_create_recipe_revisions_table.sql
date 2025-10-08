@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS recipe_manager.recipe_revisions (
   change_comment TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
--- @TODO(jsamuelsen): Add a check constraint to ensure valid JSONB structure.
+-- @TODO(jsamuelsen11): Add a check constraint to ensure valid JSONB structure.

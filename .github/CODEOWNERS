@@ -3,44 +3,44 @@
 # Order is important; the last matching pattern takes the most precedence.
 
 # Global fallback - repository owner reviews everything by default
-* @jsamuelsen
+* @jsamuelsen11
 
 # Database schema and SQL files
-/db/ @jsamuelsen
-*.sql @jsamuelsen
+/db/ @jsamuelsen11
+*.sql @jsamuelsen11
 
 # Kubernetes manifests and deployment
-/k8s/ @jsamuelsen
+/k8s/ @jsamuelsen11
 
 # Scripts and automation
-/scripts/ @jsamuelsen
+/scripts/ @jsamuelsen11
 
 # Python code
-/python/ @jsamuelsen
+/python/ @jsamuelsen11
 
 # Documentation
-*.md @jsamuelsen
-/docs/ @jsamuelsen
+*.md @jsamuelsen11
+/docs/ @jsamuelsen11
 
 # CI/CD and GitHub workflows
-/.github/ @jsamuelsen
-.pre-commit-config.yaml @jsamuelsen
+/.github/ @jsamuelsen11
+.pre-commit-config.yaml @jsamuelsen11
 
 # Configuration files
-*.yaml @jsamuelsen
-*.yml @jsamuelsen
-*.json @jsamuelsen
-*.toml @jsamuelsen
+*.yaml @jsamuelsen11
+*.yml @jsamuelsen11
+*.json @jsamuelsen11
+*.toml @jsamuelsen11
 
 # Security-sensitive files (require additional review)
-.secrets.baseline @jsamuelsen
-SECURITY.md @jsamuelsen
-/.github/workflows/security.yml @jsamuelsen
+.secrets.baseline @jsamuelsen11
+SECURITY.md @jsamuelsen11
+/.github/workflows/security.yml @jsamuelsen11
 
 # Release and versioning
-CHANGELOG.md @jsamuelsen
-/.github/workflows/release.yml @jsamuelsen
+CHANGELOG.md @jsamuelsen11
+/.github/workflows/release.yml @jsamuelsen11
 
 # Monitoring configuration
-/monitoring/ @jsamuelsen
-/grafana/ @jsamuelsen
+/monitoring/ @jsamuelsen11
+/grafana/ @jsamuelsen11
