@@ -1,4 +1,20 @@
 ---
+ci:
+  autofix_commit_msg: |
+    chore(pre-commit): auto fixes from pre-commit.ci hooks
+
+    For more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ""
+  autoupdate_commit_msg: "chore(pre-commit): pre-commit autoupdate"
+  autoupdate_schedule: weekly
+  skip:
+    # Local hooks - require system dependencies not available in CI
+    - kube-score
+    # Commit-msg stage hooks - not supported in pre-commit.ci
+    - conventional-pre-commit
+  submodules: false
+
 repos:
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
