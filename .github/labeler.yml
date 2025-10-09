@@ -1,0 +1,92 @@
+---
+# PR Labeler Configuration
+# Automatically labels PRs based on changed files
+
+# Dependencies
+dependencies:
+  - python/requirements.txt
+  - python/requirements-dev.txt
+
+# Documentation
+documentation:
+  - "**/*.md"
+  - docs/**/*
+  - CLAUDE.md
+  - README.md
+
+# GitHub configuration
+github:
+  - .github/**/*
+
+# Workflows
+github-actions:
+  - .github/workflows/**/*
+
+# Docker
+docker:
+  - Dockerfile
+  - docker-compose*.yml
+  - .dockerignore
+
+# Configuration
+configuration:
+  - "**/*.yml"
+  - "**/*.yaml"
+  - "**/*.json"
+  - .env.example
+  - .env
+
+# Database Schema
+database-schema:
+  - db/init/schema/**/*
+  - "**/*.sql"
+
+# Database Functions
+database-functions:
+  - db/init/functions/**/*
+
+# Database Views
+database-views:
+  - db/init/views/**/*
+
+# Database Triggers
+database-triggers:
+  - db/init/triggers/**/*
+
+# Database Users/Roles
+database-users:
+  - db/init/users/**/*
+
+# Test Data/Fixtures
+fixtures:
+  - db/fixtures/**/*
+
+# Python Code
+python:
+  - "python/**/*.py"
+  - python/nutritional_data_importer/**/*
+
+# Python Tests
+tests:
+  - "python/tests/**/*"
+  - "python/**/*test*.py"
+
+# Scripts
+scripts:
+  - scripts/**/*
+  - "**/*.sh"
+
+# Kubernetes
+kubernetes:
+  - k8s/**/*
+
+# Monitoring
+monitoring:
+  - monitoring/**/*
+  - monitoring/grafana-dashboards/**/*
+  - monitoring/prometheus/**/*
+
+# Security
+security:
+  - .secrets.baseline
+  - SECURITY.md
