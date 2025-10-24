@@ -11,6 +11,19 @@ and this project adheres to
 
 ### Added
 
+- Recipe Collections feature with flexible organization and sharing capabilities
+  - Three new database tables: `recipe_collections`, `recipe_collection_items`,
+    `collection_collaborators`
+  - Visibility controls: public, private, friends-only
+  - Collaboration modes: owner-only, all users, specific users
+  - Custom recipe ordering within collections using display_order
+  - Three new views: `vw_collection_summary`, `vw_user_collection_access`,
+    `vw_collection_full_details`
+  - Helper functions: `check_collection_edit_permission`,
+    `add_recipe_to_collection`, `get_collection_details`
+  - Comprehensive test fixtures demonstrating all collection features
+  - Automatic timestamp management for collection updates
+  - Permission validation triggers to prevent invalid collaborator assignments
 - Comprehensive PostgreSQL monitoring with Prometheus and Grafana integration
 - postgres_exporter sidecar container for metrics collection
 - Custom recipe-specific business metrics and performance monitoring

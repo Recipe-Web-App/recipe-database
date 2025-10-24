@@ -51,6 +51,8 @@ nutritional data, and real-time monitoring.
 - **Recipe categorization**: Tags, difficulty levels, meal types, and cuisine
   categories
 - **User-generated content**: Reviews, ratings, and favorites system
+- **Recipe collections**: Organize recipes into custom collections with flexible
+  sharing and collaboration
 
 ### 👥 User Management
 
@@ -84,10 +86,15 @@ erDiagram
     USERS ||--o{ REVIEWS : writes
     USERS ||--o{ RECIPE_FAVORITES : favorites
     USERS ||--o{ MEAL_PLANS : plans
+    USERS ||--o{ RECIPE_COLLECTIONS : owns
+    USERS ||--o{ COLLECTION_COLLABORATORS : collaborates_on
     RECIPES ||--o{ RECIPE_INGREDIENTS : contains
     RECIPES ||--o{ RECIPE_STEPS : has_steps
     RECIPES ||--o{ REVIEWS : receives
     RECIPES ||--o{ RECIPE_REVISIONS : tracks
+    RECIPES ||--o{ RECIPE_COLLECTION_ITEMS : included_in
+    RECIPE_COLLECTIONS ||--o{ RECIPE_COLLECTION_ITEMS : contains
+    RECIPE_COLLECTIONS ||--o{ COLLECTION_COLLABORATORS : shared_with
     INGREDIENTS ||--o{ RECIPE_INGREDIENTS : used_in
     INGREDIENTS ||--o{ NUTRITIONAL_INFO : has_nutrition
 ```
@@ -101,6 +108,7 @@ erDiagram
 | **Ingredients** | Ingredient catalog          | Nutritional data, allergen information, units        |
 | **Reviews**     | User-generated feedback     | Ratings, comments, moderation                        |
 | **Meal Plans**  | User meal planning          | Calendar integration, nutritional goals              |
+| **Collections** | Recipe organization         | Visibility controls, collaboration modes, ordering   |
 
 ### Technology Stack
 
@@ -309,7 +317,7 @@ curl http://localhost:9187/metrics
 
 | Component                 | Status      | Description                                         |
 | ------------------------- | ----------- | --------------------------------------------------- |
-| **Database Schema**       | ✅ Complete | 30 tables with comprehensive relationships          |
+| **Database Schema**       | ✅ Complete | 33 tables with comprehensive relationships          |
 | **Stored Functions**      | ✅ Complete | Recipe CRUD, rating aggregation, user management    |
 | **Database Triggers**     | ✅ Complete | Timestamp management, data validation, preferences  |
 | **Database Views**        | ✅ Complete | Recipe summaries, user favorites, top-rated recipes |
@@ -320,6 +328,7 @@ curl http://localhost:9187/metrics
 | **Operational Scripts**   | ✅ Complete | 20+ scripts for deployment and management           |
 | **Data Processing**       | ✅ Complete | Python ETL pipeline for OpenFoodFacts data          |
 | **Documentation**         | ✅ Complete | Comprehensive setup and operations guides           |
+| **Recipe Collections**    | ✅ Complete | Collection organization with collaboration support  |
 
 ### 🚧 **REMAINING WORK (DATABASE-SPECIFIC)**
 

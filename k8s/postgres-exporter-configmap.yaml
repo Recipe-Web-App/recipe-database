@@ -99,3 +99,50 @@ data:
             description: "Total execution time of the query in milliseconds"
             key_labels:
               - query
+
+    # Collection activity metrics
+    collection_stats:
+      query: |
+        SELECT
+          COUNT(DISTINCT c.collection_id) as total_collections,
+          COUNT(DISTINCT CASE WHEN c.visibility = 'PUBLIC' THEN c.collection_id END) as public_collections,
+          COUNT(DISTINCT CASE WHEN c.collaboration_mode = 'ALL_USERS' THEN c.collection_id END) as collaborative_collections,
+          COUNT(DISTINCT CASE WHEN c.collaboration_mode = 'SPECIFIC_USERS' THEN c.collection_id END) as shared_collections,
+          COUNT(DISTINCT ci.collection_id) as collections_with_recipes,
+          COALESCE(AVG(recipe_counts.recipe_count), 0) as avg_recipes_per_collection,
+          COALESCE(AVG(collab_counts.collab_count), 0) as avg_collaborators_per_collection
+        FROM recipe_manager.recipe_collections c
+        LEFT JOIN recipe_manager.recipe_collection_items ci ON c.collection_id = ci.collection_id
+        LEFT JOIN (
+          SELECT collection_id, COUNT(*) as recipe_count
+          FROM recipe_manager.recipe_collection_items
+          GROUP BY collection_id
+        ) recipe_counts ON c.collection_id = recipe_counts.collection_id
+        LEFT JOIN (
+          SELECT collection_id, COUNT(*) as collab_count
+          FROM recipe_manager.collection_collaborators
+          GROUP BY collection_id
+        ) collab_counts ON c.collection_id = collab_counts.collection_id
+        WHERE c.created_at > NOW() - INTERVAL '24 hours'
+      metrics:
+        - total_collections:
+            usage: "GAUGE"
+            description: "Total number of collections created in last 24 hours"
+        - public_collections:
+            usage: "GAUGE"
+            description: "Number of public collections created in last 24 hours"
+        - collaborative_collections:
+            usage: "GAUGE"
+            description: "Number of all-users collaborative collections in last 24 hours"
+        - shared_collections:
+            usage: "GAUGE"
+            description: "Number of specific-user shared collections in last 24 hours"
+        - collections_with_recipes:
+            usage: "GAUGE"
+            description: "Number of collections with at least one recipe"
+        - avg_recipes_per_collection:
+            usage: "GAUGE"
+            description: "Average number of recipes per collection"
+        - avg_collaborators_per_collection:
+            usage: "GAUGE"
+            description: "Average number of collaborators per collection"
