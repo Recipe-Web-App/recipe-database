@@ -21,6 +21,8 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 - **Recipes**: Recipe data with ingredients, steps, reviews, and revisions
 - **Ingredients**: Ingredient catalog with nutritional information
 - **Meal Plans**: User meal planning functionality
+- **Recipe Collections**: User-created collections for organizing recipes with
+  visibility and collaboration controls
 - **User Preferences**: Comprehensive preference system covering notifications,
   display, privacy, accessibility, language, security, social, sound, and theme
   settings
@@ -31,6 +33,7 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 - Recipe versioning and revisions
 - Rating and review system
 - Tag-based recipe categorization
+- Recipe collections with collaborative editing
 - Nutritional data integration
 - Advanced user preference management
 
@@ -39,7 +42,7 @@ The system uses PostgreSQL 15.4 with a `recipe_manager` schema containing:
 **Schema Organization**:
 
 - Single `recipe_manager` schema for all application tables
-- Numbered execution order for reliable initialization (001-026)
+- Numbered execution order for reliable initialization (001-035)
 - Separation of concerns: schema, functions, triggers, views, users
 
 **Data Integrity**:

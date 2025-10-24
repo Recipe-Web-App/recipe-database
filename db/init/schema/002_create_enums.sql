@@ -155,3 +155,19 @@ DO $$ BEGIN CREATE TYPE recipe_manager.processing_status_enum AS ENUM (
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
+
+-- Enum for collection visibility
+DO $$ BEGIN CREATE TYPE recipe_manager.collection_visibility_enum AS ENUM (
+  'PUBLIC', 'PRIVATE', 'FRIENDS_ONLY'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Enum for collection collaboration mode
+DO $$ BEGIN CREATE TYPE recipe_manager.collaboration_mode_enum AS ENUM (
+  'OWNER_ONLY', 'ALL_USERS', 'SPECIFIC_USERS'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
