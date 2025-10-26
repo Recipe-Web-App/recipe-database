@@ -126,5 +126,15 @@ spec:
                 secretKeyRef:
                   name: recipe-database-secret
                   key: AUTH_PASSWORD
+            - name: NOTIFICATION_SERVICE_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: recipe-database-config
+                  key: NOTIFICATION_SERVICE_USER
+            - name: NOTIFICATION_SERVICE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipe-database-secret
+                  key: NOTIFICATION_SERVICE_PASSWORD
           command: ["bash", "-c", "/app/scripts/jobHelpers/db-load-schema.sh"]
   backoffLimit: 1
