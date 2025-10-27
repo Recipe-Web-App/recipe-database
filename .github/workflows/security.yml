@@ -154,7 +154,7 @@ jobs:
           fi
 
       - name: Upload secrets baseline
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: secrets-baseline
