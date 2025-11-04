@@ -21,3 +21,7 @@ EXECUTE FUNCTION recipe_manager.set_updated_at();
 CREATE TRIGGER set_recipe_collections_updated_at BEFORE
 UPDATE ON recipe_manager.recipe_collections FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();
+
+CREATE TRIGGER set_recipe_comments_updated_at BEFORE
+UPDATE ON recipe_manager.recipe_comments FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.set_updated_at();

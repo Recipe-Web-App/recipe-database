@@ -9,11 +9,14 @@ SELECT
   u.user_id,
   u.username,
   COALESCE(AVG(rv.rating), 0) AS average_rating,
-  COUNT(f.user_id) AS favorites_count
+  COUNT(f.user_id) AS favorites_count,
+  COUNT(rc.comment_id) AS total_comment_count,
+  COUNT(rc.comment_id) FILTER (WHERE rc.is_public = TRUE) AS public_comment_count
 FROM recipe_manager.recipes AS r
 INNER JOIN recipe_manager.users AS u ON r.user_id = u.user_id
 LEFT JOIN recipe_manager.reviews AS rv ON r.recipe_id = rv.recipe_id
 LEFT JOIN recipe_manager.recipe_favorites AS f ON r.recipe_id = f.recipe_id
+LEFT JOIN recipe_manager.recipe_comments AS rc ON r.recipe_id = rc.recipe_id
 GROUP BY
   r.recipe_id,
   u.user_id;

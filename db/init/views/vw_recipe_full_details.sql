@@ -27,6 +27,12 @@ SELECT
   ) FILTER (
     WHERE sc.comment_text IS NOT NULL AND sc.is_public = TRUE
   ) AS step_comments,
+  ARRAY_AGG(
+    rc.comment_text
+    ORDER BY rc.created_at
+  ) FILTER (
+    WHERE rc.comment_text IS NOT NULL AND rc.is_public = TRUE
+  ) AS recipe_comments,
   ROUND(AVG(rv.rating)::NUMERIC, 1) AS avg_rating,
   COUNT(rv.rating) AS review_count
 FROM recipe_manager.recipes AS r
@@ -37,6 +43,7 @@ LEFT JOIN recipe_manager.ingredient_comments AS ic
 LEFT JOIN recipe_manager.recipe_steps AS s ON r.recipe_id = s.recipe_id
 LEFT JOIN recipe_manager.step_comments AS sc
   ON s.step_id = sc.step_id AND r.recipe_id = sc.recipe_id
+LEFT JOIN recipe_manager.recipe_comments AS rc ON r.recipe_id = rc.recipe_id
 LEFT JOIN recipe_manager.reviews AS rv ON r.recipe_id = rv.recipe_id
 GROUP BY
   r.recipe_id,
