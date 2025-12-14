@@ -39,7 +39,7 @@ print_separator "-"
 kubectl delete -f k8s/configmap-template.yaml -n "$NAMESPACE" --ignore-not-found
 kubectl delete -f k8s/deployment.yaml -n "$NAMESPACE" --ignore-not-found
 kubectl delete -f k8s/secret-template.yaml -n "$NAMESPACE" --ignore-not-found
-kubectl delete -f k8s/service.yaml -n "$NAMESPACE" --ignore-not-found
+kubectl delete -f k8s/service-template.yaml -n "$NAMESPACE" --ignore-not-found
 
 print_separator "="
 echo "🧹 Deleting database initialization job..."
@@ -89,6 +89,18 @@ if [[ "$stop_mk" =~ ^[Yy]$ ]]; then
   echo "✅ Minikube stopped."
 else
   echo "🟢 Minikube left running."
+fi
+
+print_separator "="
+echo "🌐 Removing recipe-database.local from /etc/hosts..."
+print_separator "-"
+
+DB_HOSTNAME="recipe-database.local"
+if grep -q "$DB_HOSTNAME" /etc/hosts; then
+  sed -i "/$DB_HOSTNAME/d" /etc/hosts
+  echo "✅ Removed $DB_HOSTNAME from /etc/hosts"
+else
+  echo "ℹ️ No $DB_HOSTNAME entry found in /etc/hosts"
 fi
 
 print_separator "="

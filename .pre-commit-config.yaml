@@ -190,5 +190,6 @@ repos:
         entry: kube-score score
         language: system
         files: ^k8s/.*\.ya?ml$
+        exclude: -template\.ya?ml$
         args:
           ["--ignore-test", "pod-networkpolicy", "--ignore-test", "pod-probes"]
