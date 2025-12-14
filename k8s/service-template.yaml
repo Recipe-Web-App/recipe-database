@@ -10,13 +10,14 @@ metadata:
     kube-score/ignore: service-targets-pod
     # Ignoring: Service selector matches deployment labels (analyzed separately)
 spec:
+  type: NodePort
   selector:
     app: recipe-database
   ports:
     - name: postgres
       port: 5432
       targetPort: 5432
+      nodePort: ${NODEPORT_POSTGRES}
     - name: metrics
       port: 9187
       targetPort: 9187
-  type: ClusterIP

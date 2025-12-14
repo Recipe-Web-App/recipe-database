@@ -227,7 +227,7 @@ The system is designed for Kubernetes deployment with:
 All manifests are in the `k8s/` directory:
 
 - `deployment.yaml` - Main PostgreSQL deployment
-- `service.yaml` - Service definition
+- `service-template.yaml` - Service definition with NodePort (requires envsubst)
 - `pvc.yaml` - Persistent volume claim
 - `configmap-template.yaml` - Database configuration (requires envsubst)
 - `secret-template.yaml` - Credentials (requires envsubst)
@@ -343,6 +343,8 @@ The system expects:
      `POSTGRES_DB`
    - **Service users**: `DB_MAINT_USER`, `MONITORING_USER`, etc.
    - **Kubernetes config**: `K8S_NAMESPACE`, storage settings
+   - **Network config**: `NODEPORT_POSTGRES` (external access port, range
+     30000-32767)
    - **Resource limits**: CPU/memory requests and limits
    - **Monitoring**: `MONITORING_USER`, `MONITORING_PASSWORD`
    - **Data processing**: `OPENFOODS_CSV_PATH`, `IMPORT_BATCH_SIZE`
@@ -520,8 +522,9 @@ curl http://localhost:9187/metrics
 - **Namespace**: All resources are in `recipe-database` namespace
 - **Database Service**: `recipe-database-service`
 - **Monitoring Service**: `postgres-exporter-service`
-- **Database Port**: 5432 (PostgreSQL)
-- **Metrics Port**: 9187 (postgres_exporter)
+- **Database Port**: 5432 (PostgreSQL internal), NodePort via
+  `NODEPORT_POSTGRES` (external)
+- **Metrics Port**: 9187 (postgres_exporter, cluster-internal only)
 - **Schema**: All tables use the `recipe_manager` schema
 - **Main Database**: Specified by `POSTGRES_DB` environment variable
 

@@ -144,10 +144,10 @@ print_separator "-"
 kubectl apply -f "${CONFIG_DIR}/deployment.yaml"
 
 print_separator "="
-echo "🌐 Exposing PostgreSQL via ClusterIP Service..."
+echo "🌐 Exposing PostgreSQL via NodePort Service..."
 print_separator "-"
 
-kubectl apply -f "${CONFIG_DIR}/service.yaml"
+envsubst < "${CONFIG_DIR}/service-template.yaml" | kubectl apply -f -
 
 kubectl wait --namespace="$NAMESPACE" \
   --for=condition=Ready pod \
@@ -159,12 +159,32 @@ echo "✅ PostgreSQL is up and running in namespace '$NAMESPACE'."
 print_separator "-"
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
+MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "<node-ip>")
+DB_HOSTNAME="recipe-database.local"
+
+print_separator "="
+echo "🌐 Updating /etc/hosts with $DB_HOSTNAME..."
+print_separator "-"
+
+# Remove existing entry if present, then add new one
+sed -i "/$DB_HOSTNAME/d" /etc/hosts
+echo "$MINIKUBE_IP $DB_HOSTNAME" >> /etc/hosts
+echo "✅ Added: $MINIKUBE_IP $DB_HOSTNAME"
 
 print_separator "="
 echo "📡 Access info:"
 echo "  Pod: $POD_NAME"
-echo "  Host: recipe-database.$NAMESPACE.svc.cluster.local"
-echo "  Port: 5432"
-echo "  User: $DB_MAINT_USER"
-echo "  DB:   $POSTGRES_DB"
+print_separator "-"
+echo "  Internal (cluster) access:"
+echo "    Host: recipe-database-service.$NAMESPACE.svc.cluster.local"
+echo "    Port: 5432"
+print_separator "-"
+echo "  External (NodePort) access:"
+echo "    Host: $DB_HOSTNAME ($MINIKUBE_IP)"
+echo "    Port: $NODEPORT_POSTGRES"
+echo "    Connection: psql -h $DB_HOSTNAME -p $NODEPORT_POSTGRES -U $DB_MAINT_USER -d $POSTGRES_DB"
+print_separator "-"
+echo "  Credentials:"
+echo "    User: $DB_MAINT_USER"
+echo "    DB:   $POSTGRES_DB"
 print_separator "="
