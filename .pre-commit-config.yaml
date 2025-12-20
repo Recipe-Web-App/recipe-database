@@ -54,11 +54,11 @@ repos:
         exclude: \.lock$|\.patch$
 
   # Shell scripts
-  - repo: https://github.com/bemeurer/beautysh
-    rev: v6.2.1
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.12.0-2
     hooks:
-      - id: beautysh
-        args: ["--indent-size", "2", "--force-function-style", "fnpar"]
+      - id: shfmt
+        args: ["-w"]
         files: \.sh$
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -77,7 +77,7 @@ repos:
 
   # SQL formatting and linting
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 3.4.2
+    rev: 4.0.0a2
     hooks:
       - id: sqlfluff-fix
         args: ["--dialect=postgres", "--exclude-rules=L003,L016"]
@@ -88,14 +88,14 @@ repos:
 
   # Python formatting and linting
   - repo: https://github.com/psf/black
-    rev: 25.9.0
+    rev: 25.12.0
     hooks:
       - id: black
         files: ^python/.*\.py$
         args: ["--line-length=88", "--target-version=py39"]
 
   - repo: https://github.com/pycqa/isort
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
       - id: isort
         files: ^python/.*\.py$
@@ -116,7 +116,7 @@ repos:
           ]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.19.1
     hooks:
       - id: mypy
         files: ^python/.*\.py$
@@ -130,7 +130,7 @@ repos:
 
   # Python security
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.6
+    rev: 1.9.2
     hooks:
       - id: bandit
         files: ^python/.*\.py$
@@ -145,7 +145,7 @@ repos:
 
   # Markdown linting
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.45.0
+    rev: v0.47.0
     hooks:
       - id: markdownlint
         args: ["--fix", "--config", ".markdownlint.yaml"]
@@ -160,7 +160,7 @@ repos:
 
   # Conventional commits
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.2.0
+    rev: v4.3.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]

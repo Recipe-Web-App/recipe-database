@@ -79,7 +79,6 @@ else
   echo "✅ '$NAMESPACE' namespace created."
 fi
 
-
 print_separator "="
 echo "🔧 Loading environment variables from .env file (if present)..."
 print_separator "-"
@@ -89,11 +88,11 @@ if [ -f .env ]; then
   # Capture env before
   BEFORE_ENV=$(mktemp)
   AFTER_ENV=$(mktemp)
-  env | cut -d= -f1 | sort > "$BEFORE_ENV"
+  env | cut -d= -f1 | sort >"$BEFORE_ENV"
   # shellcheck disable=SC1091
   source .env
   # Capture env after
-  env | cut -d= -f1 | sort > "$AFTER_ENV"
+  env | cut -d= -f1 | sort >"$AFTER_ENV"
   # Show newly loaded/changed variables
   echo "✅ Loaded variables from .env:"
   comm -13 "$BEFORE_ENV" "$AFTER_ENV"
@@ -119,14 +118,14 @@ print_separator "="
 echo "⚙️ Creating/Updating ConfigMap from env..."
 print_separator "-"
 
-envsubst < "${CONFIG_DIR}/configmap-template.yaml" | kubectl apply -f -
+envsubst <"${CONFIG_DIR}/configmap-template.yaml" | kubectl apply -f -
 
 print_separator "="
 echo "🔐 Creating/updating Secret..."
 print_separator "-"
 
 kubectl delete secret "$SECRET_NAME" -n "$NAMESPACE" --ignore-not-found
-envsubst < "${CONFIG_DIR}/secret-template.yaml" | kubectl apply -f -
+envsubst <"${CONFIG_DIR}/secret-template.yaml" | kubectl apply -f -
 
 print_separator "="
 echo "💾 Applying PersistentVolumeClaim..."
@@ -134,7 +133,7 @@ print_separator "-"
 
 kubectl apply -f "${CONFIG_DIR}/pvc.yaml"
 
-kubectl get pv -o json | jq -r '.items[] | select(.spec.claimRef.namespace=="recipe-database") | .metadata.name' | \
+kubectl get pv -o json | jq -r '.items[] | select(.spec.claimRef.namespace=="recipe-database") | .metadata.name' |
   xargs -I{} kubectl label pv {} app=recipe-database --overwrite
 
 print_separator "="
@@ -147,7 +146,7 @@ print_separator "="
 echo "🌐 Exposing PostgreSQL via NodePort Service..."
 print_separator "-"
 
-envsubst < "${CONFIG_DIR}/service-template.yaml" | kubectl apply -f -
+envsubst <"${CONFIG_DIR}/service-template.yaml" | kubectl apply -f -
 
 kubectl wait --namespace="$NAMESPACE" \
   --for=condition=Ready pod \
@@ -168,7 +167,7 @@ print_separator "-"
 
 # Remove existing entry if present, then add new one
 sed -i "/$DB_HOSTNAME/d" /etc/hosts
-echo "$MINIKUBE_IP $DB_HOSTNAME" >> /etc/hosts
+echo "$MINIKUBE_IP $DB_HOSTNAME" >>/etc/hosts
 echo "✅ Added: $MINIKUBE_IP $DB_HOSTNAME"
 
 print_separator "="

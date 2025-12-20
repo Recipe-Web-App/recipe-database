@@ -40,7 +40,7 @@ echo "🚀 Finding a running PostgreSQL pod in namespace $NAMESPACE..."
 print_separator "-"
 
 POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$POD_LABEL" \
-    --field-selector=status.phase=Running \
+  --field-selector=status.phase=Running \
   -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
 
 if [ -z "$POD_NAME" ]; then

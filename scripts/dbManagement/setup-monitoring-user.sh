@@ -90,11 +90,11 @@ trap 'rm -f $TEMP_SQL' EXIT
 sed -e "s/__MONITORING_USER__/$MONITORING_USER/g" \
   -e "s/__MONITORING_PASSWORD__/$MONITORING_PASSWORD/g" \
   -e "s/__POSTGRES_DB__/$POSTGRES_DB/g" \
-  "${LOCAL_PATH}/db/init/users/005_create_monitoring_user.sql" > "$TEMP_SQL"
+  "${LOCAL_PATH}/db/init/users/005_create_monitoring_user.sql" >"$TEMP_SQL"
 
 # Execute the SQL script
 echo "📝 Executing user creation script..."
-if kubectl exec -n "$NAMESPACE" "$POD_NAME" -c recipe-database -- psql -U postgres -d "$POSTGRES_DB" < "$TEMP_SQL"; then
+if kubectl exec -n "$NAMESPACE" "$POD_NAME" -c recipe-database -- psql -U postgres -d "$POSTGRES_DB" <"$TEMP_SQL"; then
   echo "✅ Monitoring user created successfully"
 else
   echo "❌ Failed to create monitoring user"
@@ -145,9 +145,9 @@ echo "📝 Adding POSTGRES_EXPORTER_DATA_SOURCE_NAME to secret..."
 CURRENT_SECRET=$(kubectl get secret recipe-database-secret -n "$NAMESPACE" -o json 2>/dev/null || echo '{"data":{}}')
 
 # Add the new data source name to the secret
-echo "$CURRENT_SECRET" | \
+echo "$CURRENT_SECRET" |
   jq --arg dsn "$(echo -n "$DATA_SOURCE_NAME" | base64 -w 0)" \
-  '.data.POSTGRES_EXPORTER_DATA_SOURCE_NAME = $dsn' | \
+    '.data.POSTGRES_EXPORTER_DATA_SOURCE_NAME = $dsn' |
   kubectl apply -f -
 
 echo "✅ Secret updated with monitoring user credentials"

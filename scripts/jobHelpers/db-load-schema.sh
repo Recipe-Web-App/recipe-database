@@ -39,7 +39,7 @@ function execute_sql_files() {
   for f in "${files[@]}"; do
     echo "⏳ Executing $f"
     # Run the pipeline and capture the exit status of psql
-    envsubst < "$f" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+    envsubst <"$f" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
     rc=${PIPESTATUS[1]:-${PIPESTATUS[0]}}
     if [ "$rc" -ne 0 ]; then
       echo "❌ Error executing $f"

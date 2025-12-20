@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS recipe_manager.recipe_collections (
   user_id UUID NOT NULL REFERENCES recipe_manager.users (
     user_id
   ) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
+  "name" VARCHAR(255) NOT NULL,
   description TEXT,
   visibility recipe_manager.COLLECTION_VISIBILITY_ENUM NOT NULL DEFAULT 'PRIVATE',
   collaboration_mode recipe_manager.COLLABORATION_MODE_ENUM NOT NULL DEFAULT 'OWNER_ONLY',

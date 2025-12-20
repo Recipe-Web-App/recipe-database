@@ -59,7 +59,6 @@ print_separator "-"
 
 kubectl delete job db-import-nutritional-data-job -n "$NAMESPACE" --ignore-not-found
 
-
 print_separator "="
 read -r -p "⚠️ Do you want to delete the PersistentVolumeClaim (PVC)? This will delete all stored database data! (y/N): " del_pvc
 print_separator "-"

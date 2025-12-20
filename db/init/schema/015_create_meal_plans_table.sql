@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS recipe_manager.meal_plans (
   user_id UUID NOT NULL REFERENCES recipe_manager.users (
     user_id
   ) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
+  "name" VARCHAR(255) NOT NULL,
   description TEXT,
   start_date DATE,
   end_date DATE,

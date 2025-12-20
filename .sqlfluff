@@ -4,3 +4,6 @@ templater = raw
 
 [sqlfluff:indentation]
 tab_space_size = 2
+
+[sqlfluff:rules:references.quoting]
+ignore_words = role,name,comment
