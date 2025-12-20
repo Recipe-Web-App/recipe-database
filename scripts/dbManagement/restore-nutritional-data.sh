@@ -25,7 +25,6 @@ JOB_NAME="db-restore-nutritional-data-job"
 NAMESPACE="recipe-database"
 YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-restore-nutritional-data-job.yaml"
 
-
 # Set backup directories
 BACKUP_DIR="${LOCAL_PATH}/db/data/backups"
 EXPORT_DIR="${LOCAL_PATH}/db/data/exports"
@@ -66,9 +65,9 @@ function show_usage() {
   echo ""
   echo "Available backups:"
   local backups
-  backups=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | \
-      xargs -0 -n1 basename | \
-      sed 's/nutritional_info_backup_\(.*\)\.sql\.gz/  \1/' | \
+  backups=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 |
+    xargs -0 -n1 basename |
+    sed 's/nutritional_info_backup_\(.*\)\.sql\.gz/  \1/' |
     sort -r)
   if [[ -n "$backups" ]]; then
     echo "$backups"
@@ -86,19 +85,19 @@ echo "NAMESPACE: $NAMESPACE"
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -s|--schema-only)
+    -s | --schema-only)
       RESTORE_OPTIONS="$RESTORE_OPTIONS --schema-only"
       shift
       ;;
-    -d|--data-only)
+    -d | --data-only)
       RESTORE_OPTIONS="$RESTORE_OPTIONS --data-only"
       shift
       ;;
-    -t|--truncate)
+    -t | --truncate)
       RESTORE_OPTIONS="$RESTORE_OPTIONS --truncate"
       shift
       ;;
-    -h|--help)
+    -h | --help)
       show_usage
       exit 0
       ;;
@@ -179,7 +178,7 @@ function trigger_job() {
 
   # Apply the job YAML with environment variable substitution
   echo "Starting job: $JOB_NAME"
-  envsubst < "$YAML_PATH" | kubectl apply -f -
+  envsubst <"$YAML_PATH" | kubectl apply -f -
 
   # Wait for pod to be created
   echo "Waiting for pod to be ready..."

@@ -23,7 +23,7 @@ echo "📦 Checking Minikube and Kubernetes resource status..."
 print_separator "-"
 
 echo "🔍 Checking Minikube status..."
-if minikube status > /dev/null 2>&1; then
+if minikube status >/dev/null 2>&1; then
   echo "✅ Minikube is running."
 else
   echo "❌ Minikube is not running."
@@ -31,7 +31,7 @@ fi
 
 print_separator "="
 echo "🔍 Checking if namespace '$NAMESPACE' exists..."
-if kubectl get namespace "$NAMESPACE" > /dev/null 2>&1; then
+if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
   echo "✅ Namespace exists."
 else
   echo "❌ Namespace does not exist. Exiting."
@@ -65,7 +65,6 @@ fi
 print_separator "="
 echo "🔍 Checking PVCs in namespace '$NAMESPACE'..."
 kubectl get pvc -n "$NAMESPACE" || echo "❌ No PVCs found."
-
 
 print_separator "="
 echo "🔍 Checking kubectl proxy status..."

@@ -60,12 +60,12 @@ print_separator "-"
 echo "📝 Creating temporary deployment without postgres_exporter sidecar..."
 
 # Create a backup of the current deployment
-kubectl get deployment recipe-database -n "$NAMESPACE" -o yaml > /tmp/recipe-database-deployment-backup.yaml
+kubectl get deployment recipe-database -n "$NAMESPACE" -o yaml >/tmp/recipe-database-deployment-backup.yaml
 
 # Get the current deployment and remove postgres_exporter container
-kubectl get deployment recipe-database -n "$NAMESPACE" -o json | \
-  jq 'del(.spec.template.spec.containers[] | select(.name == "postgres-exporter"))' | \
-  jq 'del(.spec.template.spec.volumes[] | select(.name == "postgres-exporter-config"))' | \
+kubectl get deployment recipe-database -n "$NAMESPACE" -o json |
+  jq 'del(.spec.template.spec.containers[] | select(.name == "postgres-exporter"))' |
+  jq 'del(.spec.template.spec.volumes[] | select(.name == "postgres-exporter-config"))' |
   kubectl apply -f -
 
 echo "⏳ Waiting for deployment to update..."

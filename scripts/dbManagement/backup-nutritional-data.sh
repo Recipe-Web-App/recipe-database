@@ -89,10 +89,10 @@ print_separator "-"
 
 if kubectl exec -n recipe-database "$POD_NAME" -- \
   bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' \
-    --schema='$POSTGRES_SCHEMA' \
-    --table='$POSTGRES_SCHEMA.nutritional_info' \
-    --data-only \
-  --column-inserts" > "$BACKUP_FILE"; then
+  --schema='$POSTGRES_SCHEMA' \
+  --table='$POSTGRES_SCHEMA.nutritional_info' \
+  --data-only \
+--column-inserts" >"$BACKUP_FILE"; then
   echo -e "${GREEN}✅ Data backup completed successfully.${NC}"
 else
   echo -e "${RED}❌ Data backup failed.${NC}"
@@ -105,9 +105,9 @@ print_separator "-"
 
 if kubectl exec -n recipe-database "$POD_NAME" -- \
   bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' \
-    --schema='$POSTGRES_SCHEMA' \
-    --table='$POSTGRES_SCHEMA.nutritional_info' \
-  --schema-only" > "$SCHEMA_FILE"; then
+  --schema='$POSTGRES_SCHEMA' \
+  --table='$POSTGRES_SCHEMA.nutritional_info' \
+--schema-only" >"$SCHEMA_FILE"; then
   echo -e "${GREEN}✅ Schema export completed successfully.${NC}"
 else
   echo -e "${RED}❌ Schema export failed.${NC}"

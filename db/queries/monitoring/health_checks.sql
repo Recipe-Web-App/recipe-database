@@ -82,8 +82,8 @@ SELECT
     WHEN COUNT(*) >= 0 THEN 'OK'
     ELSE 'ERROR'
   END AS status
-FROM recipe_manager.recipes
-LIMIT 1;
+FROM recipe_manager.recipes;
+
 
 -- Check for critical errors in pg_stat_database
 SELECT
