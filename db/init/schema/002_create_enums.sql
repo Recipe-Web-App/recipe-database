@@ -171,3 +171,46 @@ DO $$ BEGIN CREATE TYPE recipe_manager.collaboration_mode_enum AS ENUM (
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
+
+-- Enum for notification types
+DO $$ BEGIN CREATE TYPE recipe_manager.notification_type_enum AS ENUM (
+  'EMAIL', 'IN_APP', 'PUSH', 'SMS'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Enum for notification delivery status
+DO $$ BEGIN CREATE TYPE recipe_manager.notification_status_enum AS ENUM (
+  'PENDING', 'QUEUED', 'SENT', 'FAILED', 'ABORTED'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
+
+-- Enum for notification categories (determines template and expected notification_data)
+DO $$ BEGIN CREATE TYPE recipe_manager.notification_category_enum AS ENUM (
+  -- Recipe events
+  'RECIPE_PUBLISHED',
+  'RECIPE_LIKED',
+  'RECIPE_COMMENTED',
+  'RECIPE_SHARED',
+  'RECIPE_COLLECTED',
+  'RECIPE_RATED',
+  'RECIPE_FEATURED',
+  'RECIPE_TRENDING',
+  -- Social events
+  'NEW_FOLLOWER',
+  'MENTION',
+  'COLLECTION_INVITE',
+  -- System events
+  'WELCOME',
+  'PASSWORD_RESET',
+  'PASSWORD_CHANGED',
+  'EMAIL_CHANGED',
+  'MAINTENANCE',
+  'SYSTEM_ALERT'
+);
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
