@@ -1,4 +1,4 @@
--- db/init/schema/033_create_recipe_collections_table.sql
+-- db/init/schema/034_create_recipe_collections_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.recipe_collections (
   collection_id BIGSERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES recipe_manager.users (

@@ -1,4 +1,4 @@
--- db/init/schema/028_create_step_comments_table.sql
+-- db/init/schema/029_create_step_comments_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.step_comments (
   comment_id BIGSERIAL PRIMARY KEY,
   recipe_id BIGINT NOT NULL REFERENCES recipe_manager.recipes (recipe_id) ON DELETE CASCADE,

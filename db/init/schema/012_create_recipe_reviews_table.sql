@@ -1,4 +1,4 @@
--- db/init/schema/011_create_recipe_reviews_table.sql
+-- db/init/schema/012_create_recipe_reviews_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.reviews (
   review_id BIGSERIAL PRIMARY KEY,
   recipe_id BIGINT NOT NULL REFERENCES recipe_manager.recipes (

@@ -1,4 +1,4 @@
--- db/init/schema/036_create_recipe_comments_table.sql
+-- db/init/schema/037_create_recipe_comments_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.recipe_comments (
   comment_id BIGSERIAL PRIMARY KEY,
   recipe_id BIGINT NOT NULL REFERENCES recipe_manager.recipes (

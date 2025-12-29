@@ -1,4 +1,4 @@
--- db/init/schema/017_create_nutritional_info_table.sql
+-- db/init/schema/018_create_nutritional_info_table.sql
 -- OpenFoodFacts nutritional information table (simplified for API schema)
 
 -- Set the schema

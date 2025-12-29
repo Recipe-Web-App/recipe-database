@@ -1,4 +1,4 @@
--- db/init/schema/035_create_collection_collaborators_table.sql
+-- db/init/schema/036_create_collection_collaborators_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.collection_collaborators (
   collection_id BIGINT NOT NULL REFERENCES recipe_manager.recipe_collections (
     collection_id

@@ -1,4 +1,4 @@
--- db/init/schema/034_create_recipe_collection_items_table.sql
+-- db/init/schema/035_create_recipe_collection_items_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.recipe_collection_items (
   collection_id BIGINT NOT NULL REFERENCES recipe_manager.recipe_collections (
     collection_id

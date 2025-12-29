@@ -1,4 +1,4 @@
--- db/init/schema/015_create_meal_plans_table.sql
+-- db/init/schema/016_create_meal_plans_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.meal_plans (
   meal_plan_id BIGSERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES recipe_manager.users (

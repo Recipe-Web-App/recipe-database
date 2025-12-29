@@ -1,4 +1,4 @@
--- db/init/schema/024_create_user_social_preferences_table.sql
+-- db/init/schema/025_create_user_social_preferences_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.user_social_preferences (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES recipe_manager.users (

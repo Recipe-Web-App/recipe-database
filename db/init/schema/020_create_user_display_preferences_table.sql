@@ -1,4 +1,4 @@
--- db/init/schema/019_create_user_display_preferences_table.sql
+-- db/init/schema/020_create_user_display_preferences_table.sql
 CREATE TABLE IF NOT EXISTS recipe_manager.user_display_preferences (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES recipe_manager.users (
