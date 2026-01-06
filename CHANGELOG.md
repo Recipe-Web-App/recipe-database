@@ -24,6 +24,18 @@ and this project adheres to
   - Comprehensive test fixtures demonstrating all collection features
   - Automatic timestamp management for collection updates
   - Permission validation triggers to prevent invalid collaborator assignments
+- Collection favorites for user bookmarking
+  - `collection_favorites` table for saving collections
+  - `vw_user_favorite_collections` view for querying user's favorite collections
+- Collection tagging system for organization
+  - `collection_tags` and `collection_tag_junction_table` tables
+  - `get_collection_tags()` function for retrieving collection tags
+- Meal plan tagging system for organization
+  - `meal_plan_tags` and `meal_plan_tag_junction_table` tables
+  - `get_meal_plan_tags()` function for retrieving meal plan tags
+- Meal plan favorites for user bookmarking
+  - `meal_plan_favorites` table for saving meal plans
+  - `vw_user_favorite_meal_plans` view for querying user's favorite meal plans
 - Comprehensive PostgreSQL monitoring with Prometheus and Grafana integration
 - postgres_exporter sidecar container for metrics collection
 - Custom recipe-specific business metrics and performance monitoring

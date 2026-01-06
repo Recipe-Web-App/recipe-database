@@ -333,7 +333,7 @@ The database initialization follows this sequence:
 
 1. **Schema Creation** (`db/init/schema/001_create_schema.sql`)
 2. **Enums Definition** (`db/init/schema/002_create_enums.sql`)
-3. **Tables Creation** (`db/init/schema/003_*.sql` to `032_*.sql`)
+3. **Tables Creation** (`db/init/schema/003_*.sql` to `043_*.sql`)
 4. **Functions** (`db/init/functions/*.sql`)
 5. **Views** (`db/init/views/*.sql`)
 6. **Triggers** (`db/init/triggers/*.sql`)
