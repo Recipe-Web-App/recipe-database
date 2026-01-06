@@ -54,6 +54,16 @@ nutritional data, and real-time monitoring.
 - **Recipe collections**: Organize recipes into custom collections with flexible
   sharing and collaboration
 
+### 🏷️ Tags & Organization
+
+- **Unified tagging system**: Consistent tagging across recipes, collections,
+  and meal plans
+- **Tag-based discovery**: Filter and find content using custom tags
+- **Favorites system**: Bookmark recipes, collections, and meal plans for quick
+  access
+- **Cross-entity organization**: Organize all content types with consistent
+  patterns
+
 ### 👥 User Management
 
 - **Role-based access control**: Admin, recipe managers, and regular users
@@ -85,6 +95,8 @@ erDiagram
     USERS ||--o{ RECIPES : creates
     USERS ||--o{ REVIEWS : writes
     USERS ||--o{ RECIPE_FAVORITES : favorites
+    USERS ||--o{ COLLECTION_FAVORITES : favorites
+    USERS ||--o{ MEAL_PLAN_FAVORITES : favorites
     USERS ||--o{ MEAL_PLANS : plans
     USERS ||--o{ RECIPE_COLLECTIONS : owns
     USERS ||--o{ COLLECTION_COLLABORATORS : collaborates_on
@@ -92,9 +104,12 @@ erDiagram
     RECIPES ||--o{ RECIPE_STEPS : has_steps
     RECIPES ||--o{ REVIEWS : receives
     RECIPES ||--o{ RECIPE_REVISIONS : tracks
+    RECIPES ||--o{ RECIPE_TAGS : tagged_with
     RECIPES ||--o{ RECIPE_COLLECTION_ITEMS : included_in
     RECIPE_COLLECTIONS ||--o{ RECIPE_COLLECTION_ITEMS : contains
     RECIPE_COLLECTIONS ||--o{ COLLECTION_COLLABORATORS : shared_with
+    RECIPE_COLLECTIONS ||--o{ COLLECTION_TAGS : tagged_with
+    MEAL_PLANS ||--o{ MEAL_PLAN_TAGS : tagged_with
     INGREDIENTS ||--o{ RECIPE_INGREDIENTS : used_in
     INGREDIENTS ||--o{ NUTRITIONAL_INFO : has_nutrition
 ```
@@ -104,11 +119,13 @@ erDiagram
 | Entity          | Description                 | Key Features                                         |
 | --------------- | --------------------------- | ---------------------------------------------------- |
 | **Users**       | User accounts and profiles  | Role-based permissions, social features, preferences |
-| **Recipes**     | Recipe content and metadata | Versioning, categorization, difficulty levels        |
+| **Recipes**     | Recipe content and metadata | Versioning, categorization, tags, difficulty levels  |
 | **Ingredients** | Ingredient catalog          | Nutritional data, allergen information, units        |
 | **Reviews**     | User-generated feedback     | Ratings, comments, moderation                        |
-| **Meal Plans**  | User meal planning          | Calendar integration, nutritional goals              |
-| **Collections** | Recipe organization         | Visibility controls, collaboration modes, ordering   |
+| **Meal Plans**  | User meal planning          | Calendar integration, tags, favorites, goals         |
+| **Collections** | Recipe organization         | Visibility, collaboration, tags, favorites           |
+| **Tags**        | Content categorization      | Recipes, collections, and meal plans tagging         |
+| **Favorites**   | User bookmarks              | Quick access to recipes, collections, meal plans     |
 
 ### Technology Stack
 
@@ -317,7 +334,7 @@ curl http://localhost:9187/metrics
 
 | Component                 | Status      | Description                                         |
 | ------------------------- | ----------- | --------------------------------------------------- |
-| **Database Schema**       | ✅ Complete | 33 tables with comprehensive relationships          |
+| **Database Schema**       | ✅ Complete | 43 tables with comprehensive relationships          |
 | **Stored Functions**      | ✅ Complete | Recipe CRUD, rating aggregation, user management    |
 | **Database Triggers**     | ✅ Complete | Timestamp management, data validation, preferences  |
 | **Database Views**        | ✅ Complete | Recipe summaries, user favorites, top-rated recipes |
@@ -386,6 +403,22 @@ Returns average rating and review count for a recipe.
 SELECT * FROM recipe_manager.get_average_rating(123);
 ```
 
+#### `get_collection_tags(collection_id)`
+
+Returns all tags associated with a collection.
+
+```sql
+SELECT * FROM recipe_manager.get_collection_tags(1);
+```
+
+#### `get_meal_plan_tags(meal_plan_id)`
+
+Returns all tags associated with a meal plan.
+
+```sql
+SELECT * FROM recipe_manager.get_meal_plan_tags(1);
+```
+
 ### Database Views
 
 #### `recipe_summary`
@@ -404,6 +437,22 @@ Top-rated recipes across the platform.
 
 ```sql
 SELECT * FROM recipe_manager.vw_top_rated_recipes LIMIT 10;
+```
+
+#### `vw_user_favorite_collections`
+
+Collections bookmarked by a user.
+
+```sql
+SELECT * FROM recipe_manager.vw_user_favorite_collections WHERE user_id = 1;
+```
+
+#### `vw_user_favorite_meal_plans`
+
+Meal plans bookmarked by a user.
+
+```sql
+SELECT * FROM recipe_manager.vw_user_favorite_meal_plans WHERE user_id = 1;
 ```
 
 ### Monitoring Queries

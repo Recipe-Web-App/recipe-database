@@ -95,22 +95,28 @@ Before you start contributing, make sure you have:
 recipe-database/
 ├── db/                          # Database schema and configuration
 │   ├── init/                    # Database initialization files
-│   │   ├── schema/             # Schema creation scripts (numbered)
+│   │   ├── schema/             # Schema scripts (numbered for execution order)
 │   │   ├── functions/          # Stored procedures and functions
 │   │   ├── triggers/           # Database triggers
 │   │   ├── views/              # Database views
 │   │   └── users/              # User creation templates
-│   ├── fixtures/               # Test data
+│   ├── fixtures/               # Test data (mirrors schema structure)
 │   └── queries/                # Common queries and monitoring
 ├── k8s/                        # Kubernetes manifests
+│   └── jobs/                   # Kubernetes job definitions
 ├── python/                     # Python data processing tools
 ├── scripts/                    # Management scripts
 │   ├── containerManagement/   # Container lifecycle scripts
 │   ├── dbManagement/          # Database operation scripts
 │   └── jobHelpers/            # Kubernetes job helpers
 ├── monitoring/                 # Monitoring configuration
+├── postman/                    # API testing collections
 └── docs/                       # Documentation
 ```
+
+> **Note**: Schema files use sequential numbering (001, 002, ...) to ensure
+> correct execution order. Fixture files mirror schema numbering for
+> consistency.
 
 ### Local Development Workflow
 
