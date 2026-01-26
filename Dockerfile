@@ -1,5 +1,5 @@
 # Stage 1: Main database image
-FROM postgres:15.4 AS database
+FROM postgres:15.15 AS database
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
