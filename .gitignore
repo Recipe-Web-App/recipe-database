@@ -19,3 +19,9 @@ tmp/
 
 # pre-commit caches
 node_modules/
+
+# Serena
+.serena/
+
+# Beads
+.bv/
