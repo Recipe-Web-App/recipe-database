@@ -219,7 +219,7 @@ jobs:
       - name: Set up Node.js for markdown tools
         uses: actions/setup-node@v6
         with:
-          node-version: "18"
+          node-version: "24"
 
       - name: Install markdown tools
         run: |
@@ -273,7 +273,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15.15
+        image: postgres:18.1
         env:
           POSTGRES_PASSWORD: test_password # pragma: allowlist secret
           POSTGRES_DB: recipe_test
@@ -328,7 +328,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15.15
+        image: postgres:18.1
         env:
           POSTGRES_PASSWORD: test_password # pragma: allowlist secret
           POSTGRES_DB: recipe_test
