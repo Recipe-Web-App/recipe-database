@@ -5,9 +5,9 @@ code in this repository.
 
 ## Repository Overview
 
-PostgreSQL-based recipe database system for Kubernetes. Handles user management,
-recipes, ingredients, meal planning, and nutritional information with a
-`recipe_manager` schema.
+PostgreSQL database system for recipe management, deployed on Kubernetes. Uses a
+single `recipe_manager` schema with 43+ tables covering users, recipes,
+ingredients, meal planning, collections, and nutritional data.
 
 ## Quick Start
 
@@ -59,9 +59,6 @@ pip install -r python/requirements.txt
 # Run importer
 python3 python/nutritional_data_importer/nutritional_data_importer.py \
   --csv-file /path/to/openfoodfacts.csv --batch-size 1000 --verbose
-
-# Run tests
-cd python && pytest --cov=nutritional_data_importer
 ```
 
 ### Linting and Formatting
@@ -126,7 +123,7 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`
 ### Schema Organization
 
 - All tables in `recipe_manager` schema
-- Files in `db/init/schema/` numbered for execution order (001-035+)
+- Files in `db/init/schema/` numbered for execution order (001-043+)
 - Functions in `db/init/functions/`, triggers in `db/init/triggers/`
 - Views in `db/init/views/`, fixtures in `db/fixtures/`
 
@@ -142,23 +139,27 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`
 
 ### Key Database Components
 
-**Functions** (`db/init/functions/`):
+**Functions** (`db/init/functions/`) - 17 functions including:
 
 - `create_recipe.sql` - Recipe creation with ingredients
 - `get_average_rating.sql` - Rating calculations
-- `get_user_meal_plans.sql` - Meal plan queries
+- `get_collection_tags.sql`, `get_meal_plan_tags.sql` - Tag retrieval
+- `add_recipe_to_collection.sql`, `check_collection_edit_permission.sql`
 
-**Triggers** (`db/init/triggers/`):
+**Triggers** (`db/init/triggers/`) - 8 triggers including:
 
 - `set_updated_at_trigger.sql` - Auto-update timestamps
-- `prevent_review_self.sql` - Prevent self-reviews
+- `prevent_review_self.sql`, `prevent_collaborator_self.sql` - Self-action
+  prevention
 - `enforce_rating_bounds_trigger.sql` - Validate ratings (1-5)
+- `create_default_preferences_trigger.sql` - User preference initialization
 
-**Views** (`db/init/views/`):
+**Views** (`db/init/views/`) - 12 views including:
 
-- `vw_recipe_summary.sql` - Recipe overview with ratings
-- `vw_top_rated_recipes.sql` - Highest rated recipes
-- `vw_recipe_full_details.sql` - Complete recipe details
+- `vw_recipe_summary.sql`, `vw_recipe_full_details.sql` - Recipe views
+- `vw_collection_summary.sql`, `vw_collection_full_details.sql` - Collection
+  views
+- `vw_user_favorite_*.sql` - User favorites (recipes, collections, meal plans)
 
 ### Database User Roles
 
@@ -213,14 +214,10 @@ Grafana dashboard: `monitoring/grafana-dashboards/postgresql-overview.json`
 
 ## Prerequisites
 
-- Kubernetes cluster (minikube for local dev)
-- kubectl, Docker, psql
-- Python 3.9+ for data processing
-- jq, envsubst for scripts
+- Kubernetes cluster (minikube for local dev), kubectl, Docker
+- psql client, Python 3.9+, jq, envsubst
 
-## Additional Documentation
+## Additional Docs
 
-- `docs/setup.md` - Installation details
-- `docs/operations.md` - Day-to-day management
-- `docs/troubleshooting.md` - Common issues
-- `monitoring/README.md` - Monitoring setup
+`docs/setup.md`, `docs/operations.md`, `docs/troubleshooting.md`,
+`monitoring/README.md`
