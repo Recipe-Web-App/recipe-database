@@ -81,7 +81,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15.4
+        image: postgres:15.15
         env:
           POSTGRES_PASSWORD: test_password # pragma: allowlist secret
           POSTGRES_USER: test_user
@@ -99,7 +99,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           cache: "pip"
 
       - name: Install dependencies
