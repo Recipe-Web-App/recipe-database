@@ -1,125 +1,164 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-
-  // Base configuration
-  "extends": [
-    "config:recommended",
-    ":enablePreCommit",
-    ":semanticCommits",
-    ":dependencyDashboard"
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    ':enablePreCommit',
+    ':semanticCommits',
+    ':dependencyDashboard',
   ],
-
-  // Schedule: Weekly on Monday at 09:00 ET (matches Dependabot)
-  "timezone": "America/New_York",
-  "schedule": ["before 10am on monday"],
-
-  // Assignees and PR limits (matches Dependabot)
-  "assignees": ["jsamuelsen11"],
-  "prConcurrentLimit": 100,
-  "prHourlyLimit": 0,
-
-  // Rebase strategy (matches Dependabot auto rebase)
-  "rebaseWhen": "behind-base-branch",
-
-  // Dependency Dashboard (Renovate enhancement)
-  "dependencyDashboard": true,
-  "dependencyDashboardTitle": "Dependency Dashboard",
-  "dependencyDashboardLabels": ["dependencies", "renovate"],
-
-  // Vulnerability Alerts (Renovate enhancement)
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"],
-    "schedule": ["at any time"]
-  },
-
-  // Lockfile Maintenance (Renovate enhancement)
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 9am on the first day of the month"]
-  },
-
-  "packageRules": [
-    // GitHub Actions - group all together
-    {
-      "matchManagers": ["github-actions"],
-      "groupName": "github-actions",
-      "labels": ["dependencies", "github-actions"],
-      "semanticCommitType": "ci",
-      "semanticCommitScope": "actions"
-    },
-
-    // Docker/Kubernetes - ignore major postgres updates
-    {
-      "matchManagers": ["kubernetes", "dockerfile"],
-      "matchPackagePatterns": ["^postgres$", "postgres-exporter"],
-      "matchUpdateTypes": ["major"],
-      "enabled": false
-    },
-    {
-      "matchManagers": ["kubernetes", "dockerfile"],
-      "labels": ["dependencies", "docker"],
-      "semanticCommitType": "docker",
-      "semanticCommitScope": "k8s"
-    },
-
-    // Python - ignore major updates for critical packages
-    {
-      "matchManagers": ["pip_requirements"],
-      "matchPackagePatterns": ["^psycopg2", "^pandas$", "^numpy$"],
-      "matchUpdateTypes": ["major"],
-      "enabled": false
-    },
-    // Python patch updates - group and auto-merge
-    {
-      "matchManagers": ["pip_requirements"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "python-patch-updates",
-      "labels": ["dependencies", "python"],
-      "semanticCommitType": "deps",
-      "semanticCommitScope": "python",
-      "automerge": true,
-      "automergeType": "pr",
-      "automergeStrategy": "squash"
-    },
-    // Python minor updates - group only
-    {
-      "matchManagers": ["pip_requirements"],
-      "matchUpdateTypes": ["minor"],
-      "groupName": "python-minor-updates",
-      "labels": ["dependencies", "python"],
-      "semanticCommitType": "deps",
-      "semanticCommitScope": "python"
-    },
-
-    // Pre-commit hooks (native Renovate support vs Dependabot gitsubmodule)
-    {
-      "matchManagers": ["pre-commit"],
-      "labels": ["dependencies", "pre-commit"],
-      "semanticCommitType": "ci",
-      "semanticCommitScope": "pre-commit"
-    },
-
-    // Auto-merge patch updates (all ecosystems)
-    {
-      "matchUpdateTypes": ["patch"],
-      "automerge": true,
-      "automergeType": "pr",
-      "automergeStrategy": "squash"
-    },
-
-    // Major updates - warning label
-    {
-      "matchUpdateTypes": ["major"],
-      "labels": ["dependencies", "breaking-change"],
-      "prBodyNotes": [
-        ":warning: **Major version update** - This PR requires manual review before merging."
-      ]
-    }
+  timezone: 'America/New_York',
+  schedule: [
+    'before 10am on monday',
   ],
-
-  // Kubernetes file matching
-  "kubernetes": {
-    "fileMatch": ["k8s/.*\\.ya?ml$", "k8s/jobs/.*\\.ya?ml$"]
-  }
+  assignees: [
+    'jsamuelsen11',
+  ],
+  prConcurrentLimit: 100,
+  prHourlyLimit: 0,
+  rebaseWhen: 'behind-base-branch',
+  dependencyDashboard: true,
+  dependencyDashboardTitle: 'Dependency Dashboard',
+  dependencyDashboardLabels: [
+    'dependencies',
+    'renovate',
+  ],
+  vulnerabilityAlerts: {
+    enabled: true,
+    labels: [
+      'security',
+    ],
+    schedule: [
+      'at any time',
+    ],
+  },
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: [
+      'before 9am on the first day of the month',
+    ],
+  },
+  packageRules: [
+    {
+      matchManagers: [
+        'github-actions',
+      ],
+      groupName: 'github-actions',
+      labels: [
+        'dependencies',
+        'github-actions',
+      ],
+      semanticCommitType: 'ci',
+      semanticCommitScope: 'actions',
+    },
+    {
+      matchManagers: [
+        'kubernetes',
+        'dockerfile',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/^postgres$/',
+        '/postgres-exporter/',
+      ],
+    },
+    {
+      matchManagers: [
+        'kubernetes',
+        'dockerfile',
+      ],
+      labels: [
+        'dependencies',
+        'docker',
+      ],
+      semanticCommitType: 'docker',
+      semanticCommitScope: 'k8s',
+    },
+    {
+      matchManagers: [
+        'pip_requirements',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/^psycopg2/',
+        '/^pandas$/',
+        '/^numpy$/',
+      ],
+    },
+    {
+      matchManagers: [
+        'pip_requirements',
+      ],
+      matchUpdateTypes: [
+        'patch',
+      ],
+      groupName: 'python-patch-updates',
+      labels: [
+        'dependencies',
+        'python',
+      ],
+      semanticCommitType: 'deps',
+      semanticCommitScope: 'python',
+      automerge: true,
+      automergeType: 'pr',
+      automergeStrategy: 'squash',
+    },
+    {
+      matchManagers: [
+        'pip_requirements',
+      ],
+      matchUpdateTypes: [
+        'minor',
+      ],
+      groupName: 'python-minor-updates',
+      labels: [
+        'dependencies',
+        'python',
+      ],
+      semanticCommitType: 'deps',
+      semanticCommitScope: 'python',
+    },
+    {
+      matchManagers: [
+        'pre-commit',
+      ],
+      labels: [
+        'dependencies',
+        'pre-commit',
+      ],
+      semanticCommitType: 'ci',
+      semanticCommitScope: 'pre-commit',
+    },
+    {
+      matchUpdateTypes: [
+        'patch',
+      ],
+      automerge: true,
+      automergeType: 'pr',
+      automergeStrategy: 'squash',
+    },
+    {
+      matchUpdateTypes: [
+        'major',
+      ],
+      labels: [
+        'dependencies',
+        'breaking-change',
+      ],
+      prBodyNotes: [
+        ':warning: **Major version update** - This PR requires manual review before merging.',
+      ],
+    },
+  ],
+  kubernetes: {
+    managerFilePatterns: [
+      '/k8s/.*\\.ya?ml$/',
+      '/k8s/jobs/.*\\.ya?ml$/',
+    ],
+  },
 }
