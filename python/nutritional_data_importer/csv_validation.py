@@ -14,11 +14,18 @@ logger = logging.getLogger(__name__)
 class USDADataFiles:
     """Container for validated USDA data file paths."""
 
-    def __init__(self, food_csv: Path, food_nutrient_csv: Path, nutrient_csv: Path):
+    def __init__(
+        self,
+        food_csv: Path,
+        food_nutrient_csv: Path,
+        nutrient_csv: Path,
+        food_portion_csv: Path | None = None,
+    ):
         """Initialize with paths to required USDA CSV files."""
         self.food_csv = food_csv
         self.food_nutrient_csv = food_nutrient_csv
         self.nutrient_csv = nutrient_csv
+        self.food_portion_csv = food_portion_csv
 
 
 def validate_usda_directory(data_dir: str) -> USDADataFiles:
@@ -72,10 +79,21 @@ def validate_usda_directory(data_dir: str) -> USDADataFiles:
         size_mb = file_path.stat().st_size / (1024 * 1024)
         logger.info(f"  {name}: {size_mb:.2f} MB")
 
+    # Check for optional food_portion.csv (for portion weight data)
+    food_portion_path = path / "food_portion.csv"
+    food_portion_csv: Path | None = None
+    if food_portion_path.exists() and food_portion_path.is_file():
+        size_mb = food_portion_path.stat().st_size / (1024 * 1024)
+        logger.info(f"  food_portion.csv: {size_mb:.2f} MB (optional, found)")
+        food_portion_csv = food_portion_path
+    else:
+        logger.info("  food_portion.csv: not found (optional, skipping portions)")
+
     logger.info(f"Validated USDA data directory: {path.absolute()}")
 
     return USDADataFiles(
         food_csv=required_files["food.csv"],
         food_nutrient_csv=required_files["food_nutrient.csv"],
         nutrient_csv=required_files["nutrient.csv"],
+        food_portion_csv=food_portion_csv,
     )

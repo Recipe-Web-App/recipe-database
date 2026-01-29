@@ -292,3 +292,78 @@ def insert_food_with_nutrients(
     upsert_minerals(cursor, profile_id, minerals)
 
     return ingredient_id
+
+
+def get_fdc_id_to_ingredient_id_map(cursor) -> dict[int, int]:
+    """Get a mapping of fdc_id to ingredient_id for all ingredients.
+
+    Args:
+        cursor: Database cursor
+
+    Returns:
+        Dict mapping fdc_id -> ingredient_id
+    """
+    cursor.execute("""
+        SELECT fdc_id, ingredient_id
+        FROM recipe_manager.ingredients
+        WHERE fdc_id IS NOT NULL
+        """)
+    return {row[0]: row[1] for row in cursor.fetchall()}
+
+
+def insert_ingredient_portions(
+    cursor,
+    portions: list[dict],
+    fdc_to_ingredient: dict[int, int],
+) -> tuple[int, int]:
+    """Batch insert ingredient portions.
+
+    Args:
+        cursor: Database cursor
+        portions: List of portion dicts with keys:
+            fdc_id, portion_description, unit, modifier, gram_weight, sequence_number
+        fdc_to_ingredient: Mapping of fdc_id -> ingredient_id
+
+    Returns:
+        Tuple of (inserted_count, skipped_count)
+    """
+    inserted = 0
+    skipped = 0
+
+    for portion in portions:
+        fdc_id = portion["fdc_id"]
+        ingredient_id = fdc_to_ingredient.get(fdc_id)
+
+        if ingredient_id is None:
+            skipped += 1
+            continue
+
+        try:
+            cursor.execute(
+                """
+                INSERT INTO recipe_manager.ingredient_portions
+                    (ingredient_id, portion_description, unit, modifier,
+                     gram_weight, sequence_number, data_source)
+                VALUES (%s, %s, %s, %s, %s, %s, 'USDA')
+                ON CONFLICT (ingredient_id, portion_description) DO UPDATE SET
+                    unit = EXCLUDED.unit,
+                    modifier = EXCLUDED.modifier,
+                    gram_weight = EXCLUDED.gram_weight,
+                    sequence_number = EXCLUDED.sequence_number,
+                    updated_at = now()
+                """,
+                (
+                    ingredient_id,
+                    portion["portion_description"],
+                    portion["unit"],
+                    portion.get("modifier"),
+                    portion["gram_weight"],
+                    portion.get("sequence_number"),
+                ),
+            )
+            inserted += 1
+        except Exception as e:
+            logger.warning(f"Failed to insert portion for fdc_id {fdc_id}: {e}")
+            skipped += 1
+
+    return inserted, skipped

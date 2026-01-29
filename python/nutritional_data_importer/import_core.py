@@ -10,7 +10,13 @@ from typing import Any
 
 from csv_validation import USDADataFiles
 from data_processing import parse_foods_csv, stream_food_nutrients
-from database import get_database_connection, insert_food_with_nutrients
+from database import (
+    get_database_connection,
+    get_fdc_id_to_ingredient_id_map,
+    insert_food_with_nutrients,
+    insert_ingredient_portions,
+)
+from portion_processing import stream_portions
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +40,8 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
     results: dict[str, Any] = {
         "foods_imported": 0,
         "foods_skipped": 0,
+        "portions_imported": 0,
+        "portions_skipped": 0,
         "errors": [],
     }
 
@@ -84,8 +92,70 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
                     results["errors"].append(error_msg)
                 conn.rollback()
 
-        # Final commit
+        # Final commit for nutrient data
         conn.commit()
+        logger.info(
+            f"Nutrient import completed: {results['foods_imported']:,} foods imported"
+        )
+
+        # Step 3: Import portion data if food_portion.csv exists
+        if data_files.food_portion_csv:
+            logger.info("Step 3: Processing portion weights...")
+
+            # Get fdc_id -> ingredient_id mapping for portion lookups
+            fdc_to_ingredient = get_fdc_id_to_ingredient_id_map(cursor)
+            valid_fdc_ids = set(fdc_to_ingredient.keys())
+            logger.info(
+                f"Found {len(valid_fdc_ids):,} ingredients with fdc_ids for portion mapping"
+            )
+
+            # Stream and batch insert portions
+            portion_batch: list[dict] = []
+            batch_size = 1000
+
+            for portion in stream_portions(data_files.food_portion_csv, valid_fdc_ids):
+                portion_batch.append(
+                    {
+                        "fdc_id": portion.fdc_id,
+                        "portion_description": portion.portion_description,
+                        "unit": portion.unit,
+                        "modifier": portion.modifier,
+                        "gram_weight": portion.gram_weight,
+                        "sequence_number": portion.sequence_number,
+                    }
+                )
+
+                if len(portion_batch) >= batch_size:
+                    inserted, skipped = insert_ingredient_portions(
+                        cursor, portion_batch, fdc_to_ingredient
+                    )
+                    results["portions_imported"] += inserted
+                    results["portions_skipped"] += skipped
+                    conn.commit()
+                    portion_batch = []
+
+                    if results["portions_imported"] % 5000 == 0:
+                        logger.info(
+                            f"Progress: {results['portions_imported']:,} portions imported"
+                        )
+
+            # Insert remaining portions
+            if portion_batch:
+                inserted, skipped = insert_ingredient_portions(
+                    cursor, portion_batch, fdc_to_ingredient
+                )
+                results["portions_imported"] += inserted
+                results["portions_skipped"] += skipped
+                conn.commit()
+
+            logger.info(
+                f"Portion import completed: "
+                f"{results['portions_imported']:,} imported, "
+                f"{results['portions_skipped']:,} skipped"
+            )
+        else:
+            logger.info("Step 3: Skipping portions (food_portion.csv not found)")
+
         logger.info("Import completed successfully")
 
     except Exception as e:
