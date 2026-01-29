@@ -106,13 +106,9 @@ print_separator '-'
 
 eval "$(minikube docker-env)"
 
-echo "📦 Building main database image..."
-docker build --target database -t "$FULL_IMAGE_NAME" .
+echo "📦 Building database image..."
+docker build -t "$FULL_IMAGE_NAME" .
 echo "✅ Database image '${FULL_IMAGE_NAME}' built successfully."
-
-echo "📦 Building job runner image..."
-docker build --target jobs -t "${IMAGE_NAME}-jobs:${IMAGE_TAG}" .
-echo "✅ Job runner image '${IMAGE_NAME}-jobs:${IMAGE_TAG}' built successfully."
 
 print_separator "="
 echo "⚙️ Creating/Updating ConfigMap from env..."

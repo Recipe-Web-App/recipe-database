@@ -34,7 +34,7 @@ cp .env.example .env  # Edit with your configuration
 ./scripts/dbManagement/db-connect.sh            # Interactive psql session
 ./scripts/dbManagement/backup-db.sh             # Backup database
 ./scripts/dbManagement/export-schema.sh         # Export schema
-./scripts/dbManagement/import-nutritional-data.sh  # Import OpenFoodFacts data
+./scripts/dbManagement/import-nutritional-data.sh  # Import USDA FoodData Central
 ```
 
 ### Container Management
@@ -51,14 +51,17 @@ cp .env.example .env  # Edit with your configuration
 
 ### Python (Nutritional Data Importer)
 
-```bash
-# Setup
-python3 -m venv venv && source venv/bin/activate
-pip install -r python/requirements.txt
+The Python importer is run automatically via the shell script:
 
-# Run importer
-python3 python/nutritional_data_importer/nutritional_data_importer.py \
-  --csv-file /path/to/openfoodfacts.csv --batch-size 1000 --verbose
+```bash
+# Import USDA FoodData Central nutritional data
+./scripts/dbManagement/import-nutritional-data.sh --dataset foundation_food
+
+# Available options:
+#   --dataset NAME    foundation_food or sr_legacy_food
+#   --date DATE       Dataset release date (e.g., 2024-04-18)
+#   --force-download  Force re-download even if files exist
+#   --keep-files      Keep downloaded files after completion
 ```
 
 ### Linting and Formatting
@@ -187,7 +190,6 @@ For production: use ALTER TABLE migrations, not DROP/CREATE.
 - `*-template.yaml` - Templates requiring envsubst (handled by deploy scripts)
 - `postgres-exporter-*.yaml` - Monitoring exporter
 - `servicemonitor.yaml`, `prometheusrule.yaml` - Prometheus integration
-- Jobs in `k8s/jobs/` for one-time operations
 
 ### Access Patterns
 
@@ -196,10 +198,12 @@ For production: use ALTER TABLE migrations, not DROP/CREATE.
 - **Metrics**: `postgres-exporter-service` (port 9187, cluster-internal)
 - **External**: NodePort via `NODEPORT_POSTGRES` (30000-32767)
 
-Port forwarding for local access:
+All database management scripts use direct NodePort connections via
+`recipe-database.local` (requires `/etc/hosts` entry, added by deploy script).
 
 ```bash
-kubectl port-forward -n recipe-database svc/recipe-database-service 5432:5432
+# Direct connection example
+psql -h recipe-database.local -p $NODEPORT_POSTGRES -U $DB_MAINT_USER -d $POSTGRES_DB
 ```
 
 ## Monitoring Setup
@@ -215,7 +219,9 @@ Grafana dashboard: `monitoring/grafana-dashboards/postgresql-overview.json`
 ## Prerequisites
 
 - Kubernetes cluster (minikube for local dev), kubectl, Docker
-- psql client, Python 3.9+, jq, envsubst
+- PostgreSQL client tools (`psql`, `pg_dump`) - `apt install postgresql-client`
+- Python 3.9+ with venv support
+- jq, envsubst
 
 ## Additional Docs
 

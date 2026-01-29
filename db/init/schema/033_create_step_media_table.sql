@@ -13,12 +13,9 @@ CREATE TABLE IF NOT EXISTS recipe_manager.step_media (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_step_media_recipe_id ON recipe_manager.step_media (
-  recipe_id
-);
-CREATE INDEX idx_step_media_step_id ON recipe_manager.step_media (
-  step_id
-);
-CREATE INDEX idx_step_media_media_id ON recipe_manager.step_media (
-  media_id
-);
+CREATE INDEX IF NOT EXISTS idx_step_media_recipe_id
+ON recipe_manager.step_media (recipe_id);
+CREATE INDEX IF NOT EXISTS idx_step_media_step_id
+ON recipe_manager.step_media (step_id);
+CREATE INDEX IF NOT EXISTS idx_step_media_media_id
+ON recipe_manager.step_media (media_id);

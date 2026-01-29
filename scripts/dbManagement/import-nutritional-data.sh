@@ -1,228 +1,32 @@
 #!/bin/bash
 # scripts/dbManagement/import-nutritional-data.sh
+# Import USDA FoodData Central nutritional data via direct NodePort connection
 
 set -euo pipefail
 
-# Fixes bug where first separator line does not fill the terminal width
-COLUMNS=$(tput cols 2>/dev/null || echo 80)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Utility function for printing section separators
-function print_separator() {
-  local char="${1:-=}"
-  local width="${COLUMNS:-80}"
-  printf '%*s\n' "$width" '' | tr ' ' "$char"
-}
+# shellcheck source=_db-common.sh
+source "$SCRIPT_DIR/_db-common.sh"
 
-LOCAL_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-JOB_NAME="db-import-nutritional-data-job"
-NAMESPACE="recipe-database"
-YAML_PATH="${LOCAL_PATH}/k8s/jobs/db-import-nutritional-data-job.yaml"
+# Configuration - USDA FoodData Central
+# Download page: https://fdc.nal.usda.gov/download-datasets.html
+USDA_DATASET="${USDA_DATASET:-sr_legacy_food}" # sr_legacy_food or foundation_food
+USDA_DATE="${USDA_DATE:-2018-04}"              # Dataset release date
+USDA_BASE_URL="https://fdc.nal.usda.gov/fdc-datasets"
+USDA_ZIP_FILE="FoodData_Central_${USDA_DATASET}_csv_${USDA_DATE}.zip"
+USDA_URL="${USDA_BASE_URL}/${USDA_ZIP_FILE}"
 
-# Configuration
-OPENFOODFACTS_URL="https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz"
-LOCAL_DATA_DIR="${LOCAL_PATH}/db/data/imports"
-COMPRESSED_FILE="${LOCAL_DATA_DIR}/openfoodfacts.csv.gz"
+LOCAL_DATA_DIR="${LOCAL_PATH:-$(cd "$SCRIPT_DIR/../.." && pwd)}/db/data/imports"
+ZIP_FILE="${LOCAL_DATA_DIR}/${USDA_ZIP_FILE}"
+EXTRACT_DIR="${LOCAL_DATA_DIR}/usda_data"
+PYTHON_DIR="${LOCAL_PATH:-$(cd "$SCRIPT_DIR/../.." && pwd)}/python"
 
 # Options
 FORCE_DOWNLOAD="${FORCE_DOWNLOAD:-false}"
 KEEP_FILES="${KEEP_FILES:-false}"
 
-print_separator "="
-echo "🥗 OpenFoodFacts Nutritional Data Import"
-print_separator "-"
-echo "LOCAL_PATH: $LOCAL_PATH"
-echo "NAMESPACE: $NAMESPACE"
-echo "FORCE_DOWNLOAD: $FORCE_DOWNLOAD"
-echo "KEEP_FILES: $KEEP_FILES"
-
-# Create local data directory
-mkdir -p "$LOCAL_DATA_DIR"
-
-# Function to download OpenFoodFacts CSV
-function download_csv() {
-  print_separator "="
-  echo "📥 Downloading OpenFoodFacts CSV..."
-  print_separator "-"
-  echo "URL: $OPENFOODFACTS_URL"
-  echo "Destination: $COMPRESSED_FILE"
-
-  if command -v wget >/dev/null 2>&1; then
-    wget --continue --progress=bar:force:noscroll -O "$COMPRESSED_FILE" "$OPENFOODFACTS_URL"
-  elif command -v curl >/dev/null 2>&1; then
-    curl -L --continue-at - -o "$COMPRESSED_FILE" "$OPENFOODFACTS_URL"
-  else
-    print_separator "-"
-    echo "❌ Error: Neither wget nor curl is available"
-    print_separator "="
-    exit 1
-  fi
-
-  if [[ ! -f "$COMPRESSED_FILE" ]]; then
-    print_separator "-"
-    echo "❌ Error: Download failed - file not found"
-    print_separator "="
-    exit 1
-  fi
-
-  local file_size
-  file_size=$(du -h "$COMPRESSED_FILE" | cut -f1)
-  print_separator "-"
-  echo "✅ Download completed - File size: $file_size"
-}
-
-# Function to trigger the Kubernetes job
-function trigger_job() {
-  print_separator "="
-  echo "🚀 Triggering Kubernetes import job..."
-  print_separator "-"
-
-  echo "📋 Job configuration: $YAML_PATH"
-
-  # Delete existing job if it exists
-  echo "Cleaning up any existing job..."
-  kubectl delete job "$JOB_NAME" -n "$NAMESPACE" --ignore-not-found=true
-
-  # Wait a moment for cleanup
-  sleep 2
-
-  # Apply the job YAML
-  echo "Starting job: $JOB_NAME"
-  kubectl apply -f "$YAML_PATH"
-
-  # Wait for pod to be created
-  echo "Waiting for pod to be ready..."
-  if kubectl wait --for=condition=ready pod -l job-name="$JOB_NAME" -n "$NAMESPACE" --timeout=120s; then
-    print_separator "-"
-    echo "✅ Job started successfully"
-  else
-    print_separator "-"
-    echo "⚠️ Pod took longer than expected to become ready, but job has started"
-  fi
-}
-
-# Function to monitor job progress
-function monitor_job() {
-  print_separator "="
-  echo "⏳ Monitoring job progress..."
-  print_separator "-"
-
-  # Get the pod name for the job
-  local pod_name
-  echo "Finding job pod..."
-  for i in {1..30}; do
-    pod_name=$(kubectl get pods -l job-name="$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
-    if [[ -n "$pod_name" ]]; then
-      echo "Found pod: $pod_name"
-      break
-    fi
-    echo "Waiting for pod to appear... (attempt $i/30)"
-    sleep 2
-  done
-
-  if [[ -z "$pod_name" ]]; then
-    echo "❌ Could not find job pod after 60 seconds"
-    return 1
-  fi
-
-  # Follow the logs
-  echo "� Following job logs (Ctrl+C to stop watching, job will continue):"
-  print_separator "-"
-
-  # Follow logs with timeout protection
-  kubectl logs -f "$pod_name" -n "$NAMESPACE" &
-  local logs_pid=$!
-
-  # Wait for job completion or user interrupt
-  echo ""
-  echo "⏳ Waiting for job completion..."
-  if kubectl wait --for=condition=complete --timeout=3600s job/"$JOB_NAME" -n "$NAMESPACE"; then
-    echo ""
-    print_separator "-"
-    echo "✅ Job completed successfully!"
-  else
-    echo ""
-    print_separator "-"
-    echo "⚠️ Job did not complete within timeout or failed"
-
-    # Check job status
-    local job_status
-    job_status=$(kubectl get job "$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "Unknown")
-    echo "Job status: $job_status"
-
-    if [[ "$job_status" == "Failed" ]]; then
-      echo "❌ Job failed - check logs above for details"
-      # Kill the logs process
-      kill $logs_pid 2>/dev/null || true
-      return 1
-    fi
-  fi
-
-  # Kill the logs process if still running
-  kill $logs_pid 2>/dev/null || true
-  wait $logs_pid 2>/dev/null || true
-}
-
-# Function to cleanup files
-function cleanup() {
-  if [[ "$KEEP_FILES" != "true" ]]; then
-    print_separator "="
-    echo "🧹 Cleaning up downloaded files..."
-    print_separator "-"
-
-    if [[ -f "$COMPRESSED_FILE" ]]; then
-      echo "Removing: $COMPRESSED_FILE"
-      rm -f "$COMPRESSED_FILE"
-    fi
-
-    print_separator "-"
-    echo "✅ Cleanup completed"
-  else
-    echo "ℹ️  Keeping downloaded files (KEEP_FILES=true)"
-  fi
-}
-
-# Main execution
-function main() {
-  local start_time
-  start_time=$(date +%s)
-
-  print_separator "="
-  echo "🚀 Starting OpenFoodFacts import process..."
-  print_separator "-"
-  echo "Started at: $(date)"
-
-  # Download if needed
-  if [[ ! -f "$COMPRESSED_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
-    download_csv
-  else
-    echo "ℹ️  Compressed CSV already exists: $COMPRESSED_FILE"
-    echo "    Use FORCE_DOWNLOAD=true to force re-download"
-  fi
-
-  # Trigger the Kubernetes job
-  trigger_job
-
-  # Monitor job progress
-  monitor_job
-
-  # Cleanup files
-  cleanup
-
-  local end_time
-  end_time=$(date +%s)
-  local duration=$((end_time - start_time))
-
-  print_separator "="
-  echo "✅ OpenFoodFacts import process completed!"
-  echo "    Total time:  ${duration}s"
-  echo "    Finished at: $(date)"
-  print_separator "="
-}
-
-# Handle interrupts gracefully
-trap 'print_separator "-"; echo "❌ Script interrupted"; print_separator "="; exit 130' INT TERM
-
-# Parse command line arguments
+# Parse command line arguments first
 while [[ $# -gt 0 ]]; do
   case $1 in
     --force-download)
@@ -233,26 +37,258 @@ while [[ $# -gt 0 ]]; do
       KEEP_FILES=true
       shift
       ;;
+    --dataset)
+      USDA_DATASET="$2"
+      USDA_ZIP_FILE="FoodData_Central_${USDA_DATASET}_csv_${USDA_DATE}.zip"
+      USDA_URL="${USDA_BASE_URL}/${USDA_ZIP_FILE}"
+      ZIP_FILE="${LOCAL_DATA_DIR}/${USDA_ZIP_FILE}"
+      shift 2
+      ;;
+    --date)
+      USDA_DATE="$2"
+      USDA_ZIP_FILE="FoodData_Central_${USDA_DATASET}_csv_${USDA_DATE}.zip"
+      USDA_URL="${USDA_BASE_URL}/${USDA_ZIP_FILE}"
+      ZIP_FILE="${LOCAL_DATA_DIR}/${USDA_ZIP_FILE}"
+      shift 2
+      ;;
     --help | -h)
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
       echo "  --force-download    Force re-download even if files exist"
       echo "  --keep-files        Keep downloaded files after completion"
+      echo "  --dataset NAME      USDA dataset (foundation_food or sr_legacy_food)"
+      echo "  --date DATE         Dataset date (e.g., 2024-04-18)"
       echo "  --help, -h          Show this help message"
       echo ""
       echo "Environment variables:"
       echo "  FORCE_DOWNLOAD=true    Same as --force-download"
       echo "  KEEP_FILES=true        Same as --keep-files"
+      echo "  USDA_DATASET=name      Same as --dataset"
+      echo "  USDA_DATE=date         Same as --date"
       exit 0
       ;;
     *)
-      echo "Unknown option: $1"
+      log_error "Unknown option: $1"
       echo "Use --help for usage information"
       exit 1
       ;;
   esac
 done
 
+print_separator "="
+log_info "USDA FoodData Central Nutritional Data Import"
+print_separator "-"
+
+log_info "Loading environment variables..."
+load_env
+
+# Update paths with loaded LOCAL_PATH
+LOCAL_DATA_DIR="${LOCAL_PATH}/db/data/imports"
+ZIP_FILE="${LOCAL_DATA_DIR}/${USDA_ZIP_FILE}"
+EXTRACT_DIR="${LOCAL_DATA_DIR}/usda_data"
+PYTHON_DIR="${LOCAL_PATH}/python"
+
+log_info "Configuration:"
+log_info "  Dataset: $USDA_DATASET"
+log_info "  Date: $USDA_DATE"
+log_info "  Force Download: $FORCE_DOWNLOAD"
+log_info "  Keep Files: $KEEP_FILES"
+log_info "  Database: $POSTGRES_HOST:$POSTGRES_PORT"
+
+# Verify required tools
+require_commands psql python3 || exit 1
+
+# Create directories
+mkdir -p "$LOCAL_DATA_DIR"
+mkdir -p "$EXTRACT_DIR"
+
+# Function to download USDA data
+function download_usda() {
+  print_separator "="
+  log_info "Downloading USDA FoodData Central data..."
+  print_separator "-"
+  log_info "URL: $USDA_URL"
+  log_info "Destination: $ZIP_FILE"
+
+  if command -v wget >/dev/null 2>&1; then
+    wget --continue --progress=bar:force:noscroll -O "$ZIP_FILE" "$USDA_URL"
+  elif command -v curl >/dev/null 2>&1; then
+    curl -L --continue-at - -o "$ZIP_FILE" "$USDA_URL"
+  else
+    log_error "Neither wget nor curl is available"
+    exit 1
+  fi
+
+  if [[ ! -f "$ZIP_FILE" ]]; then
+    log_error "Download failed - file not found"
+    exit 1
+  fi
+
+  local file_size
+  file_size=$(du -h "$ZIP_FILE" | cut -f1)
+  print_separator "-"
+  log_success "Download completed - File size: $file_size"
+}
+
+# Function to extract ZIP file
+function extract_zip() {
+  print_separator "="
+  log_info "Extracting USDA data..."
+  print_separator "-"
+
+  # Clear extraction directory
+  rm -rf "${EXTRACT_DIR:?}/"*
+
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -o "$ZIP_FILE" -d "$EXTRACT_DIR"
+  else
+    log_error "unzip is not available"
+    exit 1
+  fi
+
+  # Find the extracted directory (USDA ZIPs contain a dated subdirectory)
+  local extracted_subdir
+  extracted_subdir=$(find "$EXTRACT_DIR" -maxdepth 1 -type d -name "FoodData_Central_*" | head -1)
+
+  if [[ -n "$extracted_subdir" ]]; then
+    # Move contents up one level for easier access
+    mv "$extracted_subdir"/* "$EXTRACT_DIR/"
+    # Use rm -rf to handle hidden files that mv * doesn't match
+    rm -rf "$extracted_subdir"
+  fi
+
+  # Verify required files exist
+  local required_files=("food.csv" "food_nutrient.csv" "nutrient.csv")
+  for file in "${required_files[@]}"; do
+    if [[ ! -f "$EXTRACT_DIR/$file" ]]; then
+      log_error "Required file not found: $file"
+      exit 1
+    fi
+  done
+
+  print_separator "-"
+  log_success "Extraction completed. Contents:"
+  find "$EXTRACT_DIR" -maxdepth 1 -name "*.csv" -print0 | xargs -0 ls -lh 2>/dev/null | head -10
+}
+
+# Function to run Python importer
+function run_python_importer() {
+  print_separator "="
+  log_info "Running Python importer..."
+  print_separator "-"
+
+  # Check if virtual environment exists
+  local venv_dir="$PYTHON_DIR/venv"
+  local requirements="$PYTHON_DIR/requirements.txt"
+  local importer="$PYTHON_DIR/nutritional_data_importer/nutritional_data_importer.py"
+
+  if [[ ! -f "$importer" ]]; then
+    log_error "Python importer not found: $importer"
+    exit 1
+  fi
+
+  # Create venv if needed
+  if [[ ! -d "$venv_dir" ]]; then
+    log_info "Creating Python virtual environment..."
+    python3 -m venv "$venv_dir"
+  fi
+
+  # Activate venv and install dependencies
+  log_info "Installing Python dependencies..."
+  # shellcheck disable=SC1091
+  source "$venv_dir/bin/activate"
+  pip install -q -r "$requirements"
+
+  # Set environment variables for the importer
+  export POSTGRES_HOST
+  export POSTGRES_PORT
+  export POSTGRES_DB
+  export POSTGRES_SCHEMA
+  export DB_MAINT_USER
+  export DB_MAINT_PASSWORD
+
+  log_info "Starting import from: $EXTRACT_DIR"
+  print_separator "-"
+
+  # Run the importer
+  if python3 "$importer" "$EXTRACT_DIR" --verbose; then
+    log_success "Python importer completed successfully"
+  else
+    log_error "Python importer failed"
+    deactivate 2>/dev/null || true
+    exit 1
+  fi
+
+  deactivate 2>/dev/null || true
+}
+
+# Function to cleanup files
+function cleanup() {
+  if [[ "$KEEP_FILES" != "true" ]]; then
+    print_separator "="
+    log_info "Cleaning up downloaded files..."
+    print_separator "-"
+
+    if [[ -f "$ZIP_FILE" ]]; then
+      log_info "Removing: $ZIP_FILE"
+      rm -f "$ZIP_FILE"
+    fi
+
+    if [[ -d "$EXTRACT_DIR" ]]; then
+      log_info "Removing: $EXTRACT_DIR"
+      rm -rf "$EXTRACT_DIR"
+    fi
+
+    log_success "Cleanup completed"
+  else
+    log_info "Keeping downloaded files (--keep-files)"
+  fi
+}
+
+# Main execution
+function main() {
+  local start_time
+  start_time=$(date +%s)
+
+  print_separator "="
+  log_info "Starting USDA FoodData Central import process..."
+  print_separator "-"
+  log_info "Started at: $(date)"
+
+  # Check database connection
+  check_db_connection || exit 1
+
+  # Download if needed
+  if [[ ! -f "$ZIP_FILE" || "$FORCE_DOWNLOAD" == "true" ]]; then
+    download_usda
+  else
+    log_info "ZIP file already exists: $ZIP_FILE"
+    log_info "Use --force-download to force re-download"
+  fi
+
+  # Extract ZIP
+  extract_zip
+
+  # Run the Python importer locally
+  run_python_importer
+
+  # Cleanup files
+  cleanup
+
+  local end_time
+  end_time=$(date +%s)
+  local duration=$((end_time - start_time))
+
+  print_separator "="
+  log_success "USDA FoodData Central import completed!"
+  log_info "Total time: ${duration}s"
+  log_info "Finished at: $(date)"
+  print_separator "="
+}
+
+# Handle interrupts gracefully
+trap 'print_separator "-"; log_info "Script interrupted"; print_separator "="; exit 130' INT TERM
+
 # Run main function
-main "$@"
+main

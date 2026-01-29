@@ -1,4 +1,4 @@
-# Stage 1: Main database image
+# PostgreSQL database image for recipe management
 FROM postgres:15.15 AS database
 
 # Install system dependencies
@@ -16,13 +16,3 @@ ENV LC_ALL=C.UTF-8
 
 # Create app directory for Python scripts
 RUN mkdir -p /app
-
-# Stage 2: Job runner image (extends main database image)
-FROM database AS jobs
-
-# Copy database files and scripts for job operations
-COPY db/ /app/sql/
-COPY scripts/ /app/scripts/
-
-# Set working directory
-WORKDIR /app

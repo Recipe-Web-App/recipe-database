@@ -14,4 +14,4 @@ VALUES (
   '2025-06-02',
   NOW(),
   NOW()
-) ON CONFLICT (user_id, name) DO NOTHING;
+);

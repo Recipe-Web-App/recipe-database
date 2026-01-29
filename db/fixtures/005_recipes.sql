@@ -34,4 +34,4 @@ VALUES (
   'https://example.com/spaghetti-carbonara',
   NOW(),
   NOW()
-) ON CONFLICT (title) DO NOTHING;
+);

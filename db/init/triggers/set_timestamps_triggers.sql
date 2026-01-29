@@ -94,17 +94,17 @@ BEFORE UPDATE ON recipe_manager.meal_plans
 FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.update_timestamp();
 
--- Nutritional info
-DROP TRIGGER IF EXISTS trigger_set_nutritional_info_created_at
-ON recipe_manager.nutritional_info;
-CREATE TRIGGER trigger_set_nutritional_info_created_at
-BEFORE INSERT ON recipe_manager.nutritional_info
+-- Nutrition profiles (USDA FoodData Central)
+DROP TRIGGER IF EXISTS trigger_set_nutrition_profiles_created_at
+ON recipe_manager.nutrition_profiles;
+CREATE TRIGGER trigger_set_nutrition_profiles_created_at
+BEFORE INSERT ON recipe_manager.nutrition_profiles
 FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_created_at();
-DROP TRIGGER IF EXISTS trigger_update_nutritional_info_updated_at
-ON recipe_manager.nutritional_info;
-CREATE TRIGGER trigger_update_nutritional_info_updated_at
-BEFORE UPDATE ON recipe_manager.nutritional_info
+DROP TRIGGER IF EXISTS trigger_update_nutrition_profiles_updated_at
+ON recipe_manager.nutrition_profiles;
+CREATE TRIGGER trigger_update_nutrition_profiles_updated_at
+BEFORE UPDATE ON recipe_manager.nutrition_profiles
 FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.update_timestamp();
 
@@ -275,3 +275,17 @@ CREATE TRIGGER trigger_set_step_media_created_at
 BEFORE INSERT ON recipe_manager.step_media
 FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_created_at();
+
+-- Ingredient portions (USDA portion weights)
+DROP TRIGGER IF EXISTS trigger_set_ingredient_portions_created_at
+ON recipe_manager.ingredient_portions;
+CREATE TRIGGER trigger_set_ingredient_portions_created_at
+BEFORE INSERT ON recipe_manager.ingredient_portions
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.set_created_at();
+DROP TRIGGER IF EXISTS trigger_update_ingredient_portions_updated_at
+ON recipe_manager.ingredient_portions;
+CREATE TRIGGER trigger_update_ingredient_portions_updated_at
+BEFORE UPDATE ON recipe_manager.ingredient_portions
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.update_timestamp();

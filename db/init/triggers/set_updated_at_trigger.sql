@@ -6,22 +6,31 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 -- Triggers
+DROP TRIGGER IF EXISTS set_recipes_updated_at ON recipe_manager.recipes;
 CREATE TRIGGER set_recipes_updated_at BEFORE
 UPDATE ON recipe_manager.recipes FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_ingredient_comments_updated_at
+ON recipe_manager.ingredient_comments;
 CREATE TRIGGER set_ingredient_comments_updated_at BEFORE
 UPDATE ON recipe_manager.ingredient_comments FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_step_comments_updated_at
+ON recipe_manager.step_comments;
 CREATE TRIGGER set_step_comments_updated_at BEFORE
 UPDATE ON recipe_manager.step_comments FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_recipe_collections_updated_at
+ON recipe_manager.recipe_collections;
 CREATE TRIGGER set_recipe_collections_updated_at BEFORE
 UPDATE ON recipe_manager.recipe_collections FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_recipe_comments_updated_at
+ON recipe_manager.recipe_comments;
 CREATE TRIGGER set_recipe_comments_updated_at BEFORE
 UPDATE ON recipe_manager.recipe_comments FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.set_updated_at();

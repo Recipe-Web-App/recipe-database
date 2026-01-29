@@ -10,6 +10,7 @@ END IF;
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS prevent_owner_collaboration ON recipe_manager.collection_collaborators;
 CREATE TRIGGER prevent_owner_collaboration BEFORE
 INSERT ON recipe_manager.collection_collaborators FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.prevent_owner_as_collaborator();

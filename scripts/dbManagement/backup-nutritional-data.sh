@@ -1,153 +1,143 @@
 #!/bin/bash
 # scripts/dbManagement/backup-nutritional-data.sh
+# Backup USDA nutrition data via direct NodePort connection
 
 set -euo pipefail
 
-# Fixes bug where first separator line does not fill the terminal width
-COLUMNS=$(tput cols 2>/dev/null || echo 80)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# Utility function for printing section separators
-function print_separator() {
-  local char="${1:-=}"
-  local width="${COLUMNS:-80}"
-  printf '%*s\n' "$width" '' | tr ' ' "$char"
-}
+# shellcheck source=_db-common.sh
+source "$SCRIPT_DIR/_db-common.sh"
 
 print_separator "="
-echo -e "${CYAN}📥 Loading environment variables...${NC}"
+log_info "Loading environment variables..."
 print_separator "-"
 
-# Load environment variables if .env exists
-if [ -f .env ]; then
-  set -o allexport
-  # shellcheck disable=SC1091
-  source .env
-  set +o allexport
-  echo -e "${GREEN}✅ Environment variables loaded.${NC}"
-else
-  echo -e "${YELLOW}ℹ️ No .env file found. Proceeding without loading environment variables.${NC}"
-fi
+load_env
 
-print_separator "="
+# Verify required tools
+require_commands psql pg_dump || exit 1
+
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_DIR="./db/data/backups"
-EXPORT_DIR="./db/data/exports"
-BACKUP_FILE="$BACKUP_DIR/nutritional_info_backup_$DATE.sql"
-SCHEMA_FILE="$EXPORT_DIR/nutritional_info_schema_$DATE.sql"
+BACKUP_DIR="$LOCAL_PATH/db/data/backups"
+EXPORT_DIR="$LOCAL_PATH/db/data/exports"
+
+# Tables to backup (USDA-based nutrition schema)
+NUTRITION_TABLES=("nutrition_profiles" "macronutrients" "vitamins" "minerals")
 
 mkdir -p "$BACKUP_DIR"
 mkdir -p "$EXPORT_DIR"
-echo -e "${CYAN}📁 Backup directory ensured at: $BACKUP_DIR${NC}"
-echo -e "${CYAN}📁 Export directory ensured at: $EXPORT_DIR${NC}"
+log_info "Backup directory: $BACKUP_DIR"
+log_info "Export directory: $EXPORT_DIR"
 
 print_separator "="
-echo -e "${CYAN}🚀 Finding PostgreSQL pod in namespace recipe-database...${NC}"
+log_info "Testing database connection..."
 print_separator "-"
 
-POD_NAME=$(kubectl get pods -n recipe-database -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
-
-if [ -z "$POD_NAME" ]; then
-  echo -e "${RED}❌ No PostgreSQL pod found in namespace recipe-database with label app=recipe-database${NC}"
-  exit 1
-fi
-
-echo -e "${GREEN}✅ Found pod: $POD_NAME${NC}"
+check_db_connection || exit 1
 
 print_separator "="
-echo -e "${CYAN}📊 Getting table statistics...${NC}"
+log_info "Getting table statistics..."
 print_separator "-"
 
-kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' psql -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -c \"
-    SET search_path TO $POSTGRES_SCHEMA;
-    SELECT
-      'Total Rows: ' || COUNT(*) as stat
-    FROM nutritional_info
-    UNION ALL
-    SELECT
-      'Table Size: ' || pg_size_pretty(pg_total_relation_size('$POSTGRES_SCHEMA.nutritional_info'))
-    UNION ALL
-    SELECT
-      'Data Size: ' || pg_size_pretty(pg_relation_size('$POSTGRES_SCHEMA.nutritional_info'))
-    UNION ALL
-    SELECT
-      'Index Size: ' || pg_size_pretty(pg_total_relation_size('$POSTGRES_SCHEMA.nutritional_info') - pg_relation_size('$POSTGRES_SCHEMA.nutritional_info'));
-\"" | while read -r line; do
-  echo -e "${CYAN}  $line${NC}"
+for table in "${NUTRITION_TABLES[@]}"; do
+  log_info "Table: $table"
+  row_count=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
+    -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c \
+    "SELECT COUNT(*) FROM $POSTGRES_SCHEMA.$table;" 2>/dev/null | tr -d ' ' || echo "N/A")
+  log_info "  Rows: $row_count"
 done
 
+# Count ingredients with nutrition data
+log_info "Ingredients with nutrition data:"
+count=$(PGPASSWORD="$DB_MAINT_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
+  -U "$DB_MAINT_USER" -d "$POSTGRES_DB" -t -c \
+  "SELECT COUNT(*) FROM $POSTGRES_SCHEMA.ingredients WHERE fdc_id IS NOT NULL;" 2>/dev/null | tr -d ' ' || echo "N/A")
+log_info "  Count: $count"
+
 print_separator "="
-echo -e "${CYAN}📦 Creating nutritional_info data backup from pod '$POD_NAME'...${NC}"
+log_info "Creating nutrition data backup..."
 print_separator "-"
 
-if kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' \
-  --schema='$POSTGRES_SCHEMA' \
-  --table='$POSTGRES_SCHEMA.nutritional_info' \
+BACKUP_FILE="$BACKUP_DIR/nutrition_data_backup_$DATE.sql"
+
+# Build table arguments for pg_dump
+TABLE_ARGS=""
+for table in "${NUTRITION_TABLES[@]}"; do
+  TABLE_ARGS="$TABLE_ARGS -t $POSTGRES_SCHEMA.$table"
+done
+
+# shellcheck disable=SC2086
+if PGPASSWORD="$DB_MAINT_PASSWORD" pg_dump \
+  -h "$POSTGRES_HOST" \
+  -p "$POSTGRES_PORT" \
+  -U "$DB_MAINT_USER" \
+  -d "$POSTGRES_DB" \
+  $TABLE_ARGS \
   --data-only \
---column-inserts" >"$BACKUP_FILE"; then
-  echo -e "${GREEN}✅ Data backup completed successfully.${NC}"
+  --column-inserts >"$BACKUP_FILE"; then
+  log_success "Data backup completed."
 else
-  echo -e "${RED}❌ Data backup failed.${NC}"
+  log_error "Data backup failed."
   exit 1
 fi
 
 print_separator "="
-echo -e "${CYAN}📋 Creating nutritional_info schema export from pod '$POD_NAME'...${NC}"
+log_info "Creating nutrition schema export..."
 print_separator "-"
 
-if kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' \
-  --schema='$POSTGRES_SCHEMA' \
-  --table='$POSTGRES_SCHEMA.nutritional_info' \
---schema-only" >"$SCHEMA_FILE"; then
-  echo -e "${GREEN}✅ Schema export completed successfully.${NC}"
+SCHEMA_FILE="$EXPORT_DIR/nutrition_schema_$DATE.sql"
+
+# shellcheck disable=SC2086
+if PGPASSWORD="$DB_MAINT_PASSWORD" pg_dump \
+  -h "$POSTGRES_HOST" \
+  -p "$POSTGRES_PORT" \
+  -U "$DB_MAINT_USER" \
+  -d "$POSTGRES_DB" \
+  $TABLE_ARGS \
+  --schema-only >"$SCHEMA_FILE"; then
+  log_success "Schema export completed."
 else
-  echo -e "${RED}❌ Schema export failed.${NC}"
+  log_error "Schema export failed."
   exit 1
 fi
 
 print_separator "="
-echo -e "${CYAN}🗜️ Compressing files...${NC}"
+log_info "Compressing files..."
 print_separator "-"
 
 if gzip "$BACKUP_FILE"; then
-  echo -e "${GREEN}✅ Data backup compressed: $(basename "$BACKUP_FILE").gz${NC}"
+  log_success "Data backup compressed: $(basename "$BACKUP_FILE").gz"
 else
-  echo -e "${YELLOW}⚠️ Failed to compress data backup${NC}"
+  log_warning "Failed to compress data backup"
 fi
 
 if gzip "$SCHEMA_FILE"; then
-  echo -e "${GREEN}✅ Schema export compressed: $(basename "$SCHEMA_FILE").gz${NC}"
+  log_success "Schema export compressed: $(basename "$SCHEMA_FILE").gz"
 else
-  echo -e "${YELLOW}⚠️ Failed to compress schema export${NC}"
+  log_warning "Failed to compress schema export"
 fi
 
 print_separator "="
-echo -e "${CYAN}🧹 Cleaning up old files (keeping last 5)...${NC}"
+log_info "Cleaning up old files (keeping last 5)..."
 print_separator "-"
 
-# Clean up old data backups (keep 5 most recent)
-find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | sort -rz | tail -zn +6 | xargs -0 rm -f 2>/dev/null || true
+# Clean up old backups (keep 5 most recent)
+find "$BACKUP_DIR" -maxdepth 1 -name 'nutrition_data_backup_*.sql.gz' -print0 | sort -rz | tail -zn +6 | xargs -0 rm -f 2>/dev/null || true
+find "$EXPORT_DIR" -maxdepth 1 -name 'nutrition_schema_*.sql.gz' -print0 | sort -rz | tail -zn +6 | xargs -0 rm -f 2>/dev/null || true
 
-# Clean up old schema exports (keep 5 most recent)
-find "$EXPORT_DIR" -maxdepth 1 -name 'nutritional_info_schema_*.sql.gz' -print0 | sort -rz | tail -zn +6 | xargs -0 rm -f 2>/dev/null || true
+# Clean up legacy files if they exist
+find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | xargs -0 rm -f 2>/dev/null || true
+find "$EXPORT_DIR" -maxdepth 1 -name 'nutritional_info_schema_*.sql.gz' -print0 | xargs -0 rm -f 2>/dev/null || true
 
-REMAINING_BACKUPS=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutritional_info_backup_*.sql.gz' -print0 | grep -cz .)
-REMAINING_EXPORTS=$(find "$EXPORT_DIR" -maxdepth 1 -name 'nutritional_info_schema_*.sql.gz' -print0 | grep -cz .)
-echo -e "${CYAN}📁 Data backups remaining: $REMAINING_BACKUPS${NC}"
-echo -e "${CYAN}📁 Schema exports remaining: $REMAINING_EXPORTS${NC}"
+REMAINING_BACKUPS=$(find "$BACKUP_DIR" -maxdepth 1 -name 'nutrition_data_backup_*.sql.gz' 2>/dev/null | wc -l)
+REMAINING_EXPORTS=$(find "$EXPORT_DIR" -maxdepth 1 -name 'nutrition_schema_*.sql.gz' 2>/dev/null | wc -l)
+log_info "Data backups remaining: $REMAINING_BACKUPS"
+log_info "Schema exports remaining: $REMAINING_EXPORTS"
 
 print_separator "="
-echo -e "${GREEN}🎉 Nutritional data backup completed successfully!${NC}"
-echo -e "${CYAN}📁 Data backup: $BACKUP_DIR/$(basename "$BACKUP_FILE").gz${NC}"
-echo -e "${CYAN}📁 Schema export: $EXPORT_DIR/$(basename "$SCHEMA_FILE").gz${NC}"
-echo -e "${CYAN}⏰ Backup completed at: $(date)${NC}"
+log_success "Nutrition data backup completed successfully!"
+log_info "Data backup: $BACKUP_DIR/$(basename "$BACKUP_FILE").gz"
+log_info "Schema export: $EXPORT_DIR/$(basename "$SCHEMA_FILE").gz"
+log_info "Backup completed at: $(date)"
 print_separator "="

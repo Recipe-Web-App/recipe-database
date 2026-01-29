@@ -4,123 +4,166 @@
 #
 # Licensed under the MIT License. See LICENSE file for details.
 
-"""OpenFoodFacts Nutritional Info Importer.
+"""USDA FoodData Central Nutritional Data Importer.
 
-This script imports ingredient data from an OpenFoodFacts CSV file
-into the recipe database.
+This script imports nutritional data from USDA FoodData Central CSV files
+into the recipe database nutrition tables.
 """
 
 import argparse
-import logging
+import os
 import sys
+import time
 from pathlib import Path
 
-from csv_validation import validate_csv_file
-from import_core import import_ingredients_from_csv
+from console import (
+    console,
+    get_import_stats_from_db,
+    print_config,
+    print_done,
+    print_error,
+    print_header,
+    print_nutrient_coverage,
+    print_summary,
+    print_top_ingredients_table,
+    print_unit_chart,
+)
+from csv_validation import validate_usda_directory
+from database import get_database_connection
+from import_core import import_usda_data
 
 # Add parent directory to path to find shared modules
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
 
-
-def print_results(results: dict):
-    """Print a nice summary of the import results."""
-    print(f"\n{'='*50}")
-    print("📊 IMPORT RESULTS")
-    print(f"{'='*50}")
-    print(f"File: {results['file_path']}")
-    print(f"File size: {results['file_size_mb']} MB")
-    print(f"Rows processed: {results['rows_processed']:,}")
-    print(f"Rows imported (new): {results['rows_imported']:,}")
-    print(f"Rows merged (duplicates): {results['rows_merged_duplicates']:,}")
-    print(
-        f"Total products in database: "
-        f"{results['rows_imported'] + results['rows_merged_duplicates']:,}"
-    )
-    print("")
-    print("📋 FILTERING RESULTS:")
-    print(f"Rows skipped (general): {results['rows_skipped']:,}")
-    print(f"Rows skipped (duplicate names): {results['rows_skipped_duplicate_name']:,}")
-    print(f"Rows skipped (no nutrition data): {results['rows_skipped_no_nutrition']:,}")
-    print(f"Rows skipped (non-American): {results['rows_skipped_non_american']:,}")
-    print(f"Duplicate codes: {results['duplicate_codes']:,}")
-
-    # Calculate filtering efficiency
-    total_rows = (
-        results["rows_processed"]
-        + results["rows_skipped"]
-        + results["rows_skipped_duplicate_name"]
-        + results["rows_skipped_no_nutrition"]
-        + results["rows_skipped_non_american"]
-    )
-    if total_rows > 0:
-        total_products = results["rows_imported"] + results["rows_merged_duplicates"]
-        import_rate = (total_products / total_rows) * 100
-        print("")
-        print("📈 EFFICIENCY:")
-        print(f"Total rows examined: {total_rows:,}")
-        print(f"Import rate: {import_rate:.1f}%")
-
-    if results["errors"]:
-        print("")
-        print(f"❌ Errors: {len(results['errors'])}")
-        for error in results["errors"][:5]:  # Show first 5 errors
-            print(f"  - {error}")
-        if len(results["errors"]) > 5:
-            print(f"  ... and {len(results['errors']) - 5} more errors")
-    else:
-        print("✅ No errors")
-    print(f"{'='*50}\n")
-
-
-def main():
-    """Import ingredients from OpenFoodFacts CSV into recipe database."""
+def main() -> None:
+    """Import USDA FoodData Central data into recipe database."""
     parser = argparse.ArgumentParser(
-        description="Import ingredients from OpenFoodFacts CSV into recipe database",
+        description="Import USDA FoodData Central data into recipe database",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s /data/openfoodfacts.csv
-  %(prog)s /data/en.openfoodfacts.org.products.csv.gz
+  %(prog)s /data/FoodData_Central_foundation_food_csv_2024-04-18
+  %(prog)s --data-dir /path/to/usda/csv
+
+The data directory should contain:
+  - food.csv           (food items with fdc_id, description)
+  - food_nutrient.csv  (nutrient values per food)
+  - nutrient.csv       (nutrient definitions)
+
+Download from: https://fdc.nal.usda.gov/download-datasets.html
         """,
     )
 
     parser.add_argument(
-        "csv_path", help="Path to the OpenFoodFacts CSV file (can be .csv or .csv.gz)"
+        "data_dir",
+        nargs="?",
+        help="Path to the extracted USDA FoodData Central CSV directory",
+    )
+    parser.add_argument(
+        "--data-dir",
+        dest="data_dir_opt",
+        help="Alternative way to specify the data directory",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
 
     args = parser.parse_args()
 
-    try:
-        # Validate input file
-        csv_path = validate_csv_file(args.csv_path)
+    # Get data directory from either positional or optional argument
+    data_dir = args.data_dir or args.data_dir_opt
+    if not data_dir:
+        parser.error("Data directory is required")
 
-        # Log configuration
-        logger.info("🔧 Configuration:")
-        logger.info(f"  CSV file: {csv_path}")
+    # Print styled header
+    print_header()
+
+    # Print configuration
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    database = os.getenv("POSTGRES_DB", "recipe_database")
+    schema = "recipe_manager"
+
+    print_config(
+        data_dir=Path(data_dir).name,
+        host=host,
+        port=port,
+        database=database,
+        schema=schema,
+    )
+
+    start_time = time.time()
+
+    try:
+        # Validate input directory
+        with console.status("[bold green]Validating USDA data directory..."):
+            data_files = validate_usda_directory(data_dir)
+        console.print(
+            f"[bold green]✓[/] Found valid USDA dataset at [cyan]{data_dir}[/]"
+        )
+        console.print()
 
         # Run the import
-        results = import_ingredients_from_csv(csv_path)
+        results = import_usda_data(data_files)
 
-        # Print results
-        print_results(results)
+        duration = time.time() - start_time
+
+        # Print summary panel
+        print_summary(
+            foods_imported=results["foods_imported"],
+            foods_skipped=results["foods_skipped"],
+            portions_imported=results["portions_imported"],
+            portions_skipped=results["portions_skipped"],
+            duration=duration,
+            errors=results["errors"] if results["errors"] else None,
+        )
+
+        # Display charts if we imported data
+        if results["foods_imported"] > 0:
+            with console.status("[bold green]Generating charts..."):
+                conn = get_database_connection()
+                cursor = conn.cursor()
+                stats = get_import_stats_from_db(cursor)
+                conn.close()
+
+            # Show portions by unit chart
+            if stats.get("unit_counts"):
+                print_unit_chart(stats["unit_counts"])
+
+            # Show nutrient coverage chart
+            if stats.get("total_foods", 0) > 0:
+                print_nutrient_coverage(
+                    total_foods=stats["total_foods"],
+                    with_macros=stats.get("with_macros", 0),
+                    with_vitamins=stats.get("with_vitamins", 0),
+                    with_minerals=stats.get("with_minerals", 0),
+                )
+
+            # Show top ingredients table
+            if stats.get("top_ingredients"):
+                print_top_ingredients_table(stats["top_ingredients"])
+
+        # Print done message
+        print_done(schema)
 
         # Exit with appropriate code
         if results["errors"]:
-            logger.warning("Import completed with errors")
             sys.exit(1)
         else:
-            logger.info("Import completed successfully")
             sys.exit(0)
 
     except KeyboardInterrupt:
-        logger.info("Import interrupted by user")
+        console.print()
+        console.print("[bold yellow]![/] Import interrupted by user")
         sys.exit(130)
     except Exception as e:
-        logger.error(f"Import failed: {e}")
+        print_error(f"Import failed: {e}")
+        if args.verbose:
+            console.print_exception()
         sys.exit(1)
 
 
