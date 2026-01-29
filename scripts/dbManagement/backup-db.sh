@@ -1,63 +1,56 @@
 #!/bin/bash
 # scripts/dbManagement/backup-db.sh
+# Full database backup via direct NodePort connection
 
 set -euo pipefail
 
-# Fixes bug where first separator line does not fill the terminal width
-COLUMNS=$(tput cols 2>/dev/null || echo 80)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Utility function for printing section separators
-function print_separator() {
-  local char="${1:-=}"
-  local width="${COLUMNS:-80}"
-  printf '%*s\n' "$width" '' | tr ' ' "$char"
-}
+# shellcheck source=_db-common.sh
+source "$SCRIPT_DIR/_db-common.sh"
 
 print_separator "="
-echo "📥 Loading environment variables..."
+log_info "Loading environment variables..."
 print_separator "-"
 
-# Load environment variables if .env exists
-if [ -f .env ]; then
-  # shellcheck disable=SC1091
-  set -o allexport
-  source .env
-  set +o allexport
-  echo "✅ Environment variables loaded."
-else
-  echo "ℹ️ No .env file found. Proceeding without loading environment variables."
-fi
+load_env
 
-print_separator "="
+# Verify required tools
+require_commands psql pg_dump || exit 1
+
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_DIR="$(dirname "$0")/../../db/data/backups"
-BACKUP_FILE="$BACKUP_DIR/recipe_backup_$DATE.sql"
+BACKUP_DIR="$LOCAL_PATH/db/data/backups"
+BACKUP_FILE="$BACKUP_DIR/recipe_backup_$DATE.sql.gz"
 
 mkdir -p "$BACKUP_DIR"
-echo "📁 Backup directory ensured at: $BACKUP_DIR"
+log_info "Backup directory: $BACKUP_DIR"
 
 print_separator "="
-echo "🚀 Finding PostgreSQL pod in namespace recipe-database..."
+log_info "Creating database backup..."
+print_separator "-"
+log_info "Host: $POSTGRES_HOST:$POSTGRES_PORT"
+log_info "Database: $POSTGRES_DB"
+log_info "Schema: $POSTGRES_SCHEMA"
+log_info "Output: $BACKUP_FILE"
 print_separator "-"
 
-POD_NAME=$(kubectl get pods -n recipe-database -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
+# Check connection first
+check_db_connection || exit 1
 
-if [ -z "$POD_NAME" ]; then
-  echo "❌ No PostgreSQL pod found in namespace recipe-database with label app=recipe-database"
-  exit 1
-fi
-
-echo "✅ Found pod: $POD_NAME"
-
-print_separator "="
-echo "📦 Creating backup from pod '$POD_NAME' into local file '$BACKUP_FILE'..."
-print_separator "-"
-
-if kubectl exec -n recipe-database "$POD_NAME" -- \
-  bash -c "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U '$DB_MAINT_USER' -d '$POSTGRES_DB' -n $POSTGRES_SCHEMA" >"$BACKUP_FILE"; then
-  echo "✅ Backup completed successfully."
+# Run pg_dump directly via NodePort
+if PGPASSWORD="$DB_MAINT_PASSWORD" pg_dump \
+  -h "$POSTGRES_HOST" \
+  -p "$POSTGRES_PORT" \
+  -U "$DB_MAINT_USER" \
+  -d "$POSTGRES_DB" \
+  -n "$POSTGRES_SCHEMA" \
+  --no-owner \
+  --no-acl | gzip >"$BACKUP_FILE"; then
+  log_success "Backup completed successfully."
+  log_info "File size: $(du -h "$BACKUP_FILE" | cut -f1)"
 else
-  echo "❌ Backup failed."
+  log_error "Backup failed."
+  rm -f "$BACKUP_FILE"
   exit 1
 fi
 

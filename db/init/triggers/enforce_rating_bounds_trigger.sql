@@ -9,6 +9,7 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 -- Trigger
+DROP TRIGGER IF EXISTS validate_rating_range ON recipe_manager.reviews;
 CREATE TRIGGER validate_rating_range BEFORE
 INSERT
 OR

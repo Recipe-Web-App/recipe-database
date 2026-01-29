@@ -11,6 +11,7 @@ END IF;
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS check_duplicate_follow ON recipe_manager.user_follows;
 CREATE TRIGGER check_duplicate_follow BEFORE
 INSERT ON recipe_manager.user_follows FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.prevent_duplicate_follow();

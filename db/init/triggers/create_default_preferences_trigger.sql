@@ -158,6 +158,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically create default preferences when a user is created
+DROP TRIGGER IF EXISTS trigger_create_default_preferences ON recipe_manager.users;
 CREATE TRIGGER trigger_create_default_preferences
 AFTER INSERT ON recipe_manager.users
 FOR EACH ROW

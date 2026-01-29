@@ -3,176 +3,221 @@
 #
 # Licensed under the MIT License. See LICENSE file for details.
 
-"""Data processing utilities for OpenFoodFacts data import."""
+"""Data processing utilities for USDA FoodData Central import.
 
+Handles parsing and transforming USDA CSV data into database-ready format.
+"""
+
+import contextlib
 import logging
+from pathlib import Path
+from typing import Iterator
 
 import pandas as pd
-from allergen_mapping import map_allergens_to_enum
 from data_cleaning import (
+    apply_conversion_factor,
+    clean_description,
     clean_numeric_value,
-    clean_nutriscore_grade,
-    parse_serving_size,
 )
-from food_groups_mapping import map_food_groups_to_enum
+from usda_mapping import TRACKED_NUTRIENT_IDS, get_db_column_for_nutrient
 
 logger = logging.getLogger(__name__)
 
 
-def prepare_row_data(row, csv_columns, target_columns):
-    """Prepare a single row of data for database insertion."""
-    row_data = []
+class FoodNutrientData:
+    """Container for a food item with its nutrients."""
 
-    # Pre-parse serving info since it creates multiple target columns from one source
-    parsed_quantity, parsed_unit = parse_serving_size(row.get("serving_size"))
+    def __init__(self, fdc_id: int, description: str, data_type: str):
+        """Initialize with food metadata from USDA food.csv."""
+        self.fdc_id = fdc_id
+        self.description = description
+        self.data_type = data_type
+        self.macros: dict[str, float | None] = {}
+        self.vitamins: dict[str, float | None] = {}
+        self.minerals: dict[str, float | None] = {}
 
-    # Define which columns are numeric and need cleaning
-    numeric_columns = [
-        "nutriscore_score",
-        "energy-kcal_100g",
-        "carbohydrates_100g",
-        "cholesterol_100g",
-        "proteins_100g",
-        "sugars_100g",
-        "added-sugars_100g",
-        "fat_100g",
-        "saturated-fat_100g",
-        "monounsaturated-fat_100g",
-        "polyunsaturated-fat_100g",
-        "omega-3-fat_100g",
-        "omega-6-fat_100g",
-        "omega-9-fat_100g",
-        "trans-fat_100g",
-        "fiber_100g",
-        "soluble-fiber_100g",
-        "insoluble-fiber_100g",
-        "vitamin-a_100g",
-        "vitamin-b6_100g",
-        "vitamin-b12_100g",
-        "vitamin-c_100g",
-        "vitamin-d_100g",
-        "vitamin-e_100g",
-        "vitamin-k_100g",
-        "calcium_100g",
-        "iron_100g",
-        "magnesium_100g",
-        "potassium_100g",
-        "sodium_100g",
-        "zinc_100g",
-        "serving_quantity",
-    ]
+    def add_nutrient(self, nutrient_id: int, amount: float) -> bool:
+        """Add a nutrient value to the appropriate category.
 
-    for col in target_columns:
-        # Handle derived columns from serving_size parsing
-        if col == "serving_quantity":
-            value = clean_numeric_value(parsed_quantity, col)
-        elif col == "serving_measurement":
-            value = parsed_unit
-        elif col in csv_columns:
-            value = row[col]
+        Args:
+            nutrient_id: USDA nutrient ID
+            amount: Raw amount from USDA
 
-            # Handle allergens column specially - convert to enum array
-            if col == "allergens":
-                allergen_enums = map_allergens_to_enum(value)
-                # Convert to PostgreSQL array format
-                if allergen_enums:
-                    value = allergen_enums
-                else:
-                    value = None
-            # Handle food_groups column specially - convert to enum
-            elif col == "food_groups":
-                value = map_food_groups_to_enum(value)
-            # Handle numeric columns with precision limits
-            elif col in numeric_columns:
-                value = clean_numeric_value(value, col)
-            # Handle nutriscore_grade specifically
-            elif col == "nutriscore_grade":
-                value = clean_nutriscore_grade(value)
-            # Handle text columns
-            elif value is not None and not pd.isna(value):
-                value = str(value).strip()
-                if not value:  # Empty string
-                    value = None
-            else:
-                value = None
-        else:
-            # Column not in CSV, set to None
-            value = None
+        Returns:
+            True if nutrient was added, False if not tracked
+        """
+        mapping = get_db_column_for_nutrient(nutrient_id)
+        if mapping is None:
+            return False
 
-        row_data.append(value)
+        table_type, column, conversion_factor = mapping
+        converted_value = apply_conversion_factor(
+            clean_numeric_value(amount), conversion_factor
+        )
 
-    return row_data
+        if table_type == "macronutrients":
+            self.macros[column] = converted_value
+        elif table_type == "vitamins":
+            self.vitamins[column] = converted_value
+        elif table_type == "minerals":
+            self.minerals[column] = converted_value
 
-
-def is_american_product(row):
-    """Check if a product is from the United States."""
-    try:
-        # Check the countries field
-        countries = row.get("countries", "")
-        countries_tags = row.get("countries_tags", "")
-        countries_en = row.get("countries_en", "")
-
-        # List of potential American identifiers
-        american_identifiers = [
-            "united states",
-            "usa",
-            "us",
-            "united-states",
-            "en:united-states",
-            "en:usa",
-            "en:us",
-        ]
-
-        # Check all country fields
-        for field in [countries, countries_tags, countries_en]:
-            if pd.isna(field):
-                continue
-
-            field_str = str(field).lower()
-
-            # Check if any American identifier is in the field
-            for identifier in american_identifiers:
-                if identifier in field_str:
-                    return True
-
-        # If no American identifiers found, not an American product
-        return False
-
-    except Exception as e:
-        # If there's an error, default to not American to be safe
-        logger.debug(f"Error checking if product is American: {e}")
-        return False
-
-
-def should_update_field(existing_value, new_value, column_name):
-    """Determine if a field should be updated based on merge logic."""
-    # Don't update if new value is null/empty
-    if new_value is None or new_value == "":
-        return False
-
-    # Always update if existing is null/empty
-    if existing_value is None or existing_value == "":
         return True
 
-    # For numeric nutrition fields, prefer non-zero values
-    if column_name.endswith("_100g") or column_name == "nutriscore_score":
+    def is_importable(self) -> bool:
+        """Check if this food should be imported.
+
+        Only imports complete food entries (foundation_food or sr_legacy_food).
+        Filters out sub-samples and agricultural acquisitions.
+
+        Returns:
+            True if this is a complete food with all core macros
+        """
+        # Only import complete food types (not sub-samples or acquisitions)
+        valid_types = {"foundation_food", "sr_legacy_food"}
+        if self.data_type not in valid_types:
+            return False
+
+        # Require all core macros for recipe calculations
+        core_macros = ["calories_kcal", "protein_g", "fat_g", "carbs_g"]
+        return all(self.macros.get(m) is not None for m in core_macros)
+
+
+def parse_foods_csv(food_csv: Path) -> dict[int, tuple[str, str]]:
+    """Parse food.csv to extract fdc_id -> (description, data_type) mapping.
+
+    Args:
+        food_csv: Path to food.csv
+
+    Returns:
+        Dict mapping fdc_id to (description, data_type)
+    """
+    logger.info(f"Parsing food.csv from {food_csv}")
+
+    foods: dict[int, tuple[str, str]] = {}
+
+    # Read in chunks to handle large files
+    for chunk in pd.read_csv(food_csv, chunksize=10000, low_memory=False):
+        for _, row in chunk.iterrows():
+            fdc_id = row.get("fdc_id")
+            description = row.get("description")
+            data_type = row.get("data_type", "")
+
+            if pd.isna(fdc_id) or pd.isna(description):
+                continue
+
+            try:
+                fdc_id = int(fdc_id)
+                description = clean_description(str(description))
+                if description:
+                    foods[fdc_id] = (description, str(data_type) if data_type else "")
+            except (ValueError, TypeError):
+                continue
+
+    logger.info(f"Parsed {len(foods)} foods from food.csv")
+    return foods
+
+
+def parse_nutrients_csv(nutrient_csv: Path) -> dict[int, str]:
+    """Parse nutrient.csv to build nutrient_id -> name mapping.
+
+    Args:
+        nutrient_csv: Path to nutrient.csv
+
+    Returns:
+        Dict mapping nutrient_id to nutrient name
+    """
+    logger.info(f"Parsing nutrient.csv from {nutrient_csv}")
+
+    nutrients: dict[int, str] = {}
+
+    df = pd.read_csv(nutrient_csv)
+    for _, row in df.iterrows():
+        nutrient_id = row.get("id")
+        name = row.get("name", "")
+
+        if pd.isna(nutrient_id):
+            continue
+
         try:
-            existing_num = float(existing_value) if existing_value is not None else 0
-            new_num = float(new_value) if new_value is not None else 0
-
-            # Update if existing is 0 and new is non-zero
-            if existing_num == 0 and new_num > 0:
-                return True
-
-            # Don't update if we already have a good value
-            return False
-
+            nutrients[int(nutrient_id)] = str(name)
         except (ValueError, TypeError):
-            return False
+            continue
 
-    # For text fields, prefer longer/more detailed content
-    if column_name in ["brands", "categories", "allergens"]:
-        return len(str(new_value)) > len(str(existing_value))
+    logger.info(f"Parsed {len(nutrients)} nutrients from nutrient.csv")
+    return nutrients
 
-    # Default: don't update (preserve first occurrence)
-    return False
+
+def stream_food_nutrients(
+    food_nutrient_csv: Path,
+    foods: dict[int, tuple[str, str]],
+    chunk_size: int = 50000,
+) -> Iterator[FoodNutrientData]:
+    """Stream food nutrient data, yielding complete FoodNutrientData objects.
+
+    This processes the food_nutrient.csv file which contains nutrient values
+    for each food. Since a single food has multiple nutrient rows, we accumulate
+    nutrients until we see a new fdc_id.
+
+    Args:
+        food_nutrient_csv: Path to food_nutrient.csv
+        foods: Dict from parse_foods_csv
+        chunk_size: Rows per chunk for memory efficiency
+
+    Yields:
+        FoodNutrientData objects with complete nutrient data
+    """
+    logger.info(f"Streaming food_nutrient.csv from {food_nutrient_csv}")
+
+    current_food: FoodNutrientData | None = None
+    current_fdc_id: int | None = None
+    rows_processed = 0
+
+    for chunk in pd.read_csv(food_nutrient_csv, chunksize=chunk_size, low_memory=False):
+        for _, row in chunk.iterrows():
+            rows_processed += 1
+
+            fdc_id = row.get("fdc_id")
+            nutrient_id = row.get("nutrient_id")
+            amount = row.get("amount")
+
+            if pd.isna(fdc_id) or pd.isna(nutrient_id):
+                continue
+
+            try:
+                fdc_id = int(fdc_id)
+                nutrient_id = int(nutrient_id)
+            except (ValueError, TypeError):
+                continue
+
+            # Skip nutrients we don't track
+            if nutrient_id not in TRACKED_NUTRIENT_IDS:
+                continue
+
+            # Skip foods we don't have metadata for
+            if fdc_id not in foods:
+                continue
+
+            # If we've moved to a new food, yield the previous one if it has data
+            if fdc_id != current_fdc_id:
+                if current_food is not None and current_food.is_importable():
+                    yield current_food
+
+                # Start new food
+                description, data_type = foods[fdc_id]
+                current_food = FoodNutrientData(fdc_id, description, data_type)
+                current_fdc_id = fdc_id
+
+            # Add nutrient to current food
+            if current_food is not None and not pd.isna(amount):
+                with contextlib.suppress(ValueError, TypeError):
+                    current_food.add_nutrient(nutrient_id, float(amount))
+
+        if rows_processed % 500000 == 0:
+            logger.info(f"Processed {rows_processed:,} nutrient rows...")
+
+    # Don't forget the last food (if it has data)
+    if current_food is not None and current_food.is_importable():
+        yield current_food
+
+    logger.info(f"Finished processing {rows_processed:,} nutrient rows")

@@ -1,53 +1,49 @@
 #!/bin/bash
 # scripts/dbManagement/export-schema.sh
+# Export database schema via direct NodePort connection
 
 set -euo pipefail
 
-# Fixes bug where first separator line does not fill the terminal width
-COLUMNS=$(tput cols 2>/dev/null || echo 80)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Utility function for printing section separators
-function print_separator() {
-  local char="${1:-=}"
-  local width="${COLUMNS:-80}"
-  printf '%*s\n' "$width" '' | tr ' ' "$char"
-}
-
-NAMESPACE="recipe-database"
-EXPORT_PATH="./db/data/exports/schema.sql"
+# shellcheck source=_db-common.sh
+source "$SCRIPT_DIR/_db-common.sh"
 
 print_separator "="
-echo "📥 Loading environment variables..."
+log_info "Loading environment variables..."
 print_separator "-"
 
-if [ -f .env ]; then
-  # shellcheck disable=SC1091
-  set -o allexport
-  source .env
-  set +o allexport
-  echo "✅ Environment variables loaded."
-else
-  echo "ℹ️ No .env file found. Proceeding without loading environment variables."
-fi
+load_env
 
-print_separator "="
-echo "📦 Exporting schema from PostgreSQL pod in namespace '$NAMESPACE'..."
-print_separator "-"
+# Verify required tools
+require_commands pg_dump || exit 1
 
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l app=recipe-database -o jsonpath="{.items[0].metadata.name}")
-
-if [ -z "$POD_NAME" ]; then
-  echo "❌ No PostgreSQL pod found in namespace '$NAMESPACE' with label app=recipe-database"
-  exit 1
-fi
-
+EXPORT_PATH="$LOCAL_PATH/db/data/exports/schema.sql"
 mkdir -p "$(dirname "$EXPORT_PATH")"
 
-if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- bash -c \
-  "PGPASSWORD='$DB_MAINT_PASSWORD' pg_dump -U $DB_MAINT_USER -d $POSTGRES_DB --schema-only" >"$EXPORT_PATH"; then
-  echo "✅ Schema exported successfully to: $EXPORT_PATH"
+print_separator "="
+log_info "Exporting schema from PostgreSQL..."
+print_separator "-"
+log_info "Host: $POSTGRES_HOST:$POSTGRES_PORT"
+log_info "Database: $POSTGRES_DB"
+log_info "Output: $EXPORT_PATH"
+print_separator "-"
+
+# Check connection first
+check_db_connection || exit 1
+
+if PGPASSWORD="$DB_MAINT_PASSWORD" pg_dump \
+  -h "$POSTGRES_HOST" \
+  -p "$POSTGRES_PORT" \
+  -U "$DB_MAINT_USER" \
+  -d "$POSTGRES_DB" \
+  --schema-only \
+  --no-owner \
+  --no-acl >"$EXPORT_PATH"; then
+  log_success "Schema exported successfully to: $EXPORT_PATH"
+  log_info "File size: $(du -h "$EXPORT_PATH" | cut -f1)"
 else
-  echo "❌ Failed to export schema."
+  log_error "Failed to export schema."
   exit 1
 fi
 

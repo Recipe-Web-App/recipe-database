@@ -9,9 +9,15 @@ DECLARE
     monitoring_password TEXT := '${MONITORING_PASSWORD}';
     target_database TEXT := '${POSTGRES_DB}';
 BEGIN
-    -- Create monitoring user with limited privileges
-    EXECUTE format('CREATE USER %I WITH PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN',
-                   monitoring_user_name, monitoring_password);
+    -- Create monitoring user with limited privileges (if not exists)
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = monitoring_user_name) THEN
+        EXECUTE format('CREATE USER %I WITH PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN',
+                       monitoring_user_name, monitoring_password);
+    ELSE
+        -- Update password if user already exists
+        EXECUTE format('ALTER USER %I WITH PASSWORD %L',
+                       monitoring_user_name, monitoring_password);
+    END IF;
 
     -- Grant connection to database
     EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', target_database, monitoring_user_name);

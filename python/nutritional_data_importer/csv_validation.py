@@ -3,7 +3,7 @@
 #
 # Licensed under the MIT License. See LICENSE file for details.
 
-"""CSV file validation utilities for OpenFoodFacts data import."""
+"""CSV file validation utilities for USDA FoodData Central data import."""
 
 import logging
 from pathlib import Path
@@ -11,20 +11,71 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def validate_csv_file(csv_path: str) -> Path:
-    """Validate that the CSV file exists and is readable."""
-    path = Path(csv_path)
+class USDADataFiles:
+    """Container for validated USDA data file paths."""
+
+    def __init__(self, food_csv: Path, food_nutrient_csv: Path, nutrient_csv: Path):
+        """Initialize with paths to required USDA CSV files."""
+        self.food_csv = food_csv
+        self.food_nutrient_csv = food_nutrient_csv
+        self.nutrient_csv = nutrient_csv
+
+
+def validate_usda_directory(data_dir: str) -> USDADataFiles:
+    """Validate that the USDA data directory contains required CSV files.
+
+    USDA FoodData Central downloads have this structure:
+        FoodData_Central_*_csv_YYYY-MM-DD/
+        +-- food.csv                 # Food items with fdc_id, description
+        +-- food_nutrient.csv        # Nutrient values per food
+        +-- nutrient.csv             # Nutrient definitions
+
+    Args:
+        data_dir: Path to the extracted USDA data directory
+
+    Returns:
+        USDADataFiles with validated paths
+
+    Raises:
+        FileNotFoundError: If directory or required files don't exist
+        ValueError: If path is not a directory
+    """
+    path = Path(data_dir)
 
     if not path.exists():
-        raise FileNotFoundError(f"CSV file not found: {csv_path}")
+        raise FileNotFoundError(f"USDA data directory not found: {data_dir}")
 
-    if not path.is_file():
-        raise ValueError(f"Path is not a file: {csv_path}")
+    if not path.is_dir():
+        raise ValueError(f"Path is not a directory: {data_dir}")
 
-    if path.suffix.lower() not in [".csv", ".gz"]:
-        logger.warning(
-            f"File doesn't have expected extension (.csv or .gz): {csv_path}"
+    # Check for required files
+    required_files = {
+        "food.csv": path / "food.csv",
+        "food_nutrient.csv": path / "food_nutrient.csv",
+        "nutrient.csv": path / "nutrient.csv",
+    }
+
+    missing_files = []
+    for name, file_path in required_files.items():
+        if not file_path.exists():
+            missing_files.append(name)
+        elif not file_path.is_file():
+            raise ValueError(f"Expected file but found directory: {file_path}")
+
+    if missing_files:
+        raise FileNotFoundError(
+            f"Missing required USDA CSV files in {data_dir}: {', '.join(missing_files)}"
         )
 
-    logger.info(f"✅ CSV file validated: {path.absolute()}")
-    return path
+    # Log file sizes for debugging
+    for name, file_path in required_files.items():
+        size_mb = file_path.stat().st_size / (1024 * 1024)
+        logger.info(f"  {name}: {size_mb:.2f} MB")
+
+    logger.info(f"Validated USDA data directory: {path.absolute()}")
+
+    return USDADataFiles(
+        food_csv=required_files["food.csv"],
+        food_nutrient_csv=required_files["food_nutrient.csv"],
+        nutrient_csv=required_files["nutrient.csv"],
+    )
