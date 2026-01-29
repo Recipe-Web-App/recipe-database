@@ -7,7 +7,7 @@
 
 from typing import Any
 
-from console import (
+from cli_utils.console import (
     console,
     create_progress,
     print_db_connected,

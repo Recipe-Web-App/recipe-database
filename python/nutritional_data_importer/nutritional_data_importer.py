@@ -16,15 +16,15 @@ import sys
 import time
 from pathlib import Path
 
-from console import (
+from cli_utils.console import (
     console,
     get_import_stats_from_db,
     print_config,
     print_done,
     print_error,
     print_header,
+    print_import_summary,
     print_nutrient_coverage,
-    print_summary,
     print_top_ingredients_table,
     print_unit_chart,
 )
@@ -80,7 +80,10 @@ Download from: https://fdc.nal.usda.gov/download-datasets.html
         parser.error("Data directory is required")
 
     # Print styled header
-    print_header()
+    print_header(
+        "🍎 USDA FoodData Central Importer",
+        "Nutritional data import from USDA FoodData Central",
+    )
 
     # Print configuration
     host = os.getenv("POSTGRES_HOST", "localhost")
@@ -89,11 +92,12 @@ Download from: https://fdc.nal.usda.gov/download-datasets.html
     schema = "recipe_manager"
 
     print_config(
-        data_dir=Path(data_dir).name,
-        host=host,
-        port=port,
-        database=database,
-        schema=schema,
+        {
+            "Dataset": Path(data_dir).name,
+            "Database": f"{host}:{port}",
+            "Schema": schema,
+            "DB Name": database,
+        }
     )
 
     start_time = time.time()
@@ -113,7 +117,7 @@ Download from: https://fdc.nal.usda.gov/download-datasets.html
         duration = time.time() - start_time
 
         # Print summary panel
-        print_summary(
+        print_import_summary(
             foods_imported=results["foods_imported"],
             foods_skipped=results["foods_skipped"],
             portions_imported=results["portions_imported"],
@@ -148,7 +152,7 @@ Download from: https://fdc.nal.usda.gov/download-datasets.html
                 print_top_ingredients_table(stats["top_ingredients"])
 
         # Print done message
-        print_done(schema)
+        print_done(f"All done! Data ready in {schema} schema.")
 
         # Exit with appropriate code
         if results["errors"]:

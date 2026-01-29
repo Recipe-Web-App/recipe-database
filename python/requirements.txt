@@ -9,6 +9,10 @@ sqlalchemy>=2.0.0
 rich>=13.0.0
 plotext>=5.2.0
 
+# Environment and HTTP
+python-dotenv>=1.0.0
+httpx>=0.27.0
+
 # Development tools (linting and formatting)
 black>=24.3.0
 isort>=5.13.0
