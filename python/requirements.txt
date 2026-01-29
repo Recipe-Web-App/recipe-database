@@ -5,6 +5,10 @@ pandas>=2.0.0
 psycopg2-binary>=2.9.0
 sqlalchemy>=2.0.0
 
+# Terminal UI
+rich>=13.0.0
+plotext>=5.2.0
+
 # Development tools (linting and formatting)
 black>=24.3.0
 isort>=5.13.0
