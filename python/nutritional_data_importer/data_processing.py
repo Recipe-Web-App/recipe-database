@@ -14,12 +14,13 @@ from pathlib import Path
 from typing import Iterator
 
 import pandas as pd
-from data_cleaning import (
+
+from .data_cleaning import (
     apply_conversion_factor,
     clean_description,
     clean_numeric_value,
 )
-from usda_mapping import TRACKED_NUTRIENT_IDS, get_db_column_for_nutrient
+from .usda_mapping import TRACKED_NUTRIENT_IDS, get_db_column_for_nutrient
 
 logger = logging.getLogger(__name__)
 

@@ -7,22 +7,23 @@
 
 from typing import Any
 
-from console import (
+from cli_utils.console import (
     console,
     create_progress,
     print_db_connected,
     print_error,
     print_skip_message,
 )
-from csv_validation import USDADataFiles
-from data_processing import parse_foods_csv, stream_food_nutrients
-from database import (
+
+from .csv_validation import USDADataFiles
+from .data_processing import parse_foods_csv, stream_food_nutrients
+from .database import (
     get_database_connection,
     get_fdc_id_to_ingredient_id_map,
     insert_food_with_nutrients,
     insert_ingredient_portions,
 )
-from portion_processing import stream_portions
+from .portion_processing import stream_portions
 
 
 def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
