@@ -17,7 +17,6 @@ Usage:
 import argparse
 import base64
 import json
-import os
 import secrets
 import subprocess  # nosec B404
 import sys
@@ -32,6 +31,7 @@ from cli_utils.console import (
     print_success,
     print_warning,
 )
+from cli_utils.database import get_database_connection
 from cli_utils.environment import get_project_root, load_env
 
 NAMESPACE = "recipe-database"
@@ -49,49 +49,6 @@ def generate_password(length: int = 25) -> str:
     # Use secrets module for cryptographically secure random strings
     alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return "".join(secrets.choice(alphabet) for _ in range(length))
-
-
-def get_admin_connection():
-    """Get database connection using admin credentials.
-
-    Returns:
-        PostgreSQL connection object
-
-    Raises:
-        psycopg2.Error: If connection fails
-        ValueError: If required environment variables are missing
-    """
-    host = os.getenv("POSTGRES_HOST")
-    port = os.getenv("POSTGRES_PORT", "5432")
-    database = os.getenv("POSTGRES_DB")
-    user = os.getenv("POSTGRES_USER")
-    password = os.getenv("POSTGRES_PASSWORD")
-
-    missing = []
-    if not host:
-        missing.append("POSTGRES_HOST")
-    if not database:
-        missing.append("POSTGRES_DB")
-    if not user:
-        missing.append("POSTGRES_USER")
-    if not password:
-        missing.append("POSTGRES_PASSWORD")
-
-    if missing:
-        raise ValueError(
-            f"Missing required environment variables: {', '.join(missing)}"
-        )
-
-    conn = psycopg2.connect(
-        host=host,
-        port=port,
-        database=database,
-        user=user,
-        password=password,
-    )
-    conn.autocommit = True
-
-    return conn
 
 
 def create_monitoring_user(conn, username: str, password: str, database: str) -> bool:
@@ -136,7 +93,7 @@ def create_monitoring_user(conn, username: str, password: str, database: str) ->
 
 
 def test_monitoring_user(
-    host: str, port: str, database: str, username: str, password: str
+    host: str, port: str | int, database: str, username: str, password: str
 ) -> dict[str, bool]:
     """Test the monitoring user permissions.
 
@@ -382,10 +339,11 @@ This script:
 
     # Connect to database
     try:
-        conn = get_admin_connection()
-        host = os.getenv("POSTGRES_HOST", "localhost")
-        port = os.getenv("POSTGRES_PORT", "5432")
-        database = os.getenv("POSTGRES_DB", "recipe_database")
+        conn = get_database_connection(admin=True)
+        conn.autocommit = True
+        host = conn.info.host or "localhost"
+        port = conn.info.port or 5432
+        database = conn.info.dbname or "recipe_database"
 
         print_success(f"Connected to database at {host}:{port}")
         console.print()

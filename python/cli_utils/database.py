@@ -20,8 +20,12 @@ from cli_utils.environment import get_config
 from psycopg2.extensions import connection as PgConnection
 
 
-def get_database_connection() -> PgConnection:
+def get_database_connection(admin: bool = False) -> PgConnection:
     """Get a database connection using environment configuration.
+
+    Args:
+        admin: If True, use admin credentials (POSTGRES_USER/PASSWORD).
+               If False, use maintenance credentials (DB_MAINT_USER/PASSWORD).
 
     Returns:
         PostgreSQL connection object
@@ -30,7 +34,7 @@ def get_database_connection() -> PgConnection:
         psycopg2.Error: If connection fails
         ValueError: If required environment variables are missing
     """
-    config = get_config()
+    config = get_config(admin=admin)
 
     conn = psycopg2.connect(
         host=config.host,
@@ -72,7 +76,8 @@ def execute_sql_file(
     content = sql_file.read_text()
 
     # Process environment variable substitution if needed
-    if use_envsubst and "${" in content:
+    # Check for $VAR or ${VAR} patterns
+    if use_envsubst and ("${" in content or "$" in content):
         # Use envsubst for variable substitution
         result = subprocess.run(  # nosec B603 B607
             ["envsubst"],

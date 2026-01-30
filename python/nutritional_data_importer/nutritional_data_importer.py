@@ -11,7 +11,6 @@ into the recipe database nutrition tables.
 """
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -28,12 +27,11 @@ from cli_utils.console import (
     print_top_ingredients_table,
     print_unit_chart,
 )
-from csv_validation import validate_usda_directory
-from database import get_database_connection
-from import_core import import_usda_data
+from cli_utils.environment import get_config
 
-# Add parent directory to path to find shared modules
-sys.path.append(str(Path(__file__).parent.parent))
+from .csv_validation import validate_usda_directory
+from .database import get_database_connection
+from .import_core import import_usda_data
 
 
 def main() -> None:
@@ -86,17 +84,14 @@ Download from: https://fdc.nal.usda.gov/download-datasets.html
     )
 
     # Print configuration
-    host = os.getenv("POSTGRES_HOST", "localhost")
-    port = os.getenv("POSTGRES_PORT", "5432")
-    database = os.getenv("POSTGRES_DB", "recipe_database")
-    schema = "recipe_manager"
+    config = get_config()
 
     print_config(
         {
             "Dataset": Path(data_dir).name,
-            "Database": f"{host}:{port}",
-            "Schema": schema,
-            "DB Name": database,
+            "Database": f"{config.host}:{config.port}",
+            "Schema": config.schema,
+            "DB Name": config.database,
         }
     )
 
@@ -152,7 +147,7 @@ Download from: https://fdc.nal.usda.gov/download-datasets.html
                 print_top_ingredients_table(stats["top_ingredients"])
 
         # Print done message
-        print_done(f"All done! Data ready in {schema} schema.")
+        print_done(f"All done! Data ready in {config.schema} schema.")
 
         # Exit with appropriate code
         if results["errors"]:

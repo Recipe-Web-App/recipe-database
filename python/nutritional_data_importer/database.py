@@ -6,10 +6,10 @@
 """Database connection and operations for USDA FoodData Central import."""
 
 import logging
-import os
 import socket
 
-import psycopg2
+from cli_utils.database import get_database_connection as _get_db_connection
+from cli_utils.environment import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -17,45 +17,20 @@ logger = logging.getLogger(__name__)
 def get_database_connection():
     """Get a database connection using environment variables."""
     try:
-        host = os.getenv("POSTGRES_HOST")
-        database = os.getenv("POSTGRES_DB")
-        user = os.getenv("DB_MAINT_USER")
-        password = os.getenv("DB_MAINT_PASSWORD")
-        port = os.getenv("POSTGRES_PORT", "5432")
+        config = get_config()
 
         logger.info("Database connection configuration:")
-        logger.info(f"  POSTGRES_HOST: {host or 'NOT SET'}")
-        logger.info(f"  POSTGRES_DB: {database or 'NOT SET'}")
-        logger.info(f"  DB_MAINT_USER: {user or 'NOT SET'}")
-        logger.info(f"  POSTGRES_PORT: {port}")
-
-        missing_vars = []
-        if not host:
-            missing_vars.append("POSTGRES_HOST")
-        if not database:
-            missing_vars.append("POSTGRES_DB")
-        if not user:
-            missing_vars.append("DB_MAINT_USER")
-        if not password:
-            missing_vars.append("DB_MAINT_PASSWORD")
-
-        if missing_vars:
-            raise ValueError(
-                f"Missing required environment variables: {', '.join(missing_vars)}"
-            )
+        logger.info(f"  Host: {config.host}")
+        logger.info(f"  Database: {config.database}")
+        logger.info(f"  User: {config.user}")
+        logger.info(f"  Port: {config.port}")
 
         # Test DNS resolution
-        logger.info(f"Testing DNS resolution for host: {host}")
-        ip = socket.gethostbyname(host)
-        logger.info(f"DNS resolution successful: {host} -> {ip}")
+        logger.info(f"Testing DNS resolution for host: {config.host}")
+        ip = socket.gethostbyname(config.host)
+        logger.info(f"DNS resolution successful: {config.host} -> {ip}")
 
-        conn = psycopg2.connect(
-            host=host,
-            database=database,
-            user=user,
-            password=password,
-            port=port,
-        )
+        conn = _get_db_connection()
         conn.autocommit = False
 
         # Set search path

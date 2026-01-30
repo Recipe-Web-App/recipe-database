@@ -8,10 +8,10 @@
 
 This script executes SQL files from the db/init directories in order:
 1. Schema definitions (tables, types, extensions)
-2. Functions
-3. Triggers
-4. Views
-5. Users and permissions
+2. Users and permissions (requires schema to exist first)
+3. Functions
+4. Triggers
+5. Views
 
 Usage:
     python -m db_tools.load_schema
@@ -35,51 +35,6 @@ from cli_utils.console import (
 )
 from cli_utils.database import execute_sql_file, get_database_connection
 from cli_utils.environment import get_project_root, load_env
-
-
-def get_admin_connection():
-    """Get database connection using admin credentials.
-
-    Returns:
-        PostgreSQL connection object
-
-    Raises:
-        psycopg2.Error: If connection fails
-        ValueError: If required environment variables are missing
-    """
-    import psycopg2
-
-    host = os.getenv("POSTGRES_HOST")
-    port = os.getenv("POSTGRES_PORT", "5432")
-    database = os.getenv("POSTGRES_DB")
-    user = os.getenv("POSTGRES_USER")
-    password = os.getenv("POSTGRES_PASSWORD")
-
-    missing = []
-    if not host:
-        missing.append("POSTGRES_HOST")
-    if not database:
-        missing.append("POSTGRES_DB")
-    if not user:
-        missing.append("POSTGRES_USER")
-    if not password:
-        missing.append("POSTGRES_PASSWORD")
-
-    if missing:
-        raise ValueError(
-            f"Missing required environment variables: {', '.join(missing)}"
-        )
-
-    conn = psycopg2.connect(
-        host=host,
-        port=port,
-        database=database,
-        user=user,
-        password=password,
-    )
-    conn.autocommit = False
-
-    return conn
 
 
 def execute_sql_directory(
@@ -150,11 +105,11 @@ Examples:
   %(prog)s --verbose          # Show each file being executed
 
 SQL directories processed (in order):
-  db/init/schema/     - Table definitions
+  db/init/schema/     - Table definitions (creates schema first)
+  db/init/users/      - User and permission setup
   db/init/functions/  - Stored functions
   db/init/triggers/   - Trigger definitions
   db/init/views/      - View definitions
-  db/init/users/      - User and permission setup
         """,
     )
 
@@ -188,10 +143,10 @@ SQL directories processed (in order):
 
     directories = [
         (sql_base / "schema", "Loading schema"),
+        (sql_base / "users", "Setting up users"),
         (sql_base / "functions", "Loading functions"),
         (sql_base / "triggers", "Creating triggers"),
         (sql_base / "views", "Creating views"),
-        (sql_base / "users", "Setting up users"),
     ]
 
     # Print configuration
@@ -199,11 +154,10 @@ SQL directories processed (in order):
     console.print()
 
     try:
+        conn = get_database_connection(admin=args.admin)
         if args.admin:
-            conn = get_admin_connection()
             user = os.getenv("POSTGRES_USER", "admin")
         else:
-            conn = get_database_connection()
             user = os.getenv("DB_MAINT_USER", "maintenance")
 
         host = conn.info.host or "localhost"

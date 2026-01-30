@@ -44,21 +44,28 @@ class DatabaseConfig:
 
 
 def find_env_file() -> Path | None:
-    """Find .env file by searching up from current directory.
+    """Find .env.local or .env file by searching up from current directory.
+
+    Prefers .env.local over .env for local development overrides.
 
     Returns:
-        Path to .env file, or None if not found
+        Path to env file, or None if not found
     """
-    # Try common locations
-    search_paths = [
-        Path.cwd() / ".env",
-        Path(__file__).parents[2] / ".env",  # python/../.env
-        Path(__file__).parents[3] / ".env",  # python/cli_utils/../../../.env
+    # Base directories to search
+    base_dirs = [
+        Path.cwd(),
+        Path(__file__).parents[2],  # python/../
+        Path(__file__).parents[3],  # python/cli_utils/../../../
     ]
 
-    for path in search_paths:
-        if path.exists():
-            return path
+    # Try .env.local first, then .env
+    for base in base_dirs:
+        env_local = base / ".env.local"
+        if env_local.exists():
+            return env_local
+        env_file = base / ".env"
+        if env_file.exists():
+            return env_file
 
     return None
 
@@ -82,8 +89,12 @@ def load_env(env_file: Path | None = None) -> bool:
     return False
 
 
-def get_config() -> DatabaseConfig:
+def get_config(admin: bool = False) -> DatabaseConfig:
     """Get database configuration from environment variables.
+
+    Args:
+        admin: If True, use POSTGRES_USER/PASSWORD (admin credentials).
+               If False, use DB_MAINT_USER/PASSWORD (maintenance credentials).
 
     Returns:
         DatabaseConfig with values from environment
@@ -91,38 +102,39 @@ def get_config() -> DatabaseConfig:
     Raises:
         ValueError: If required environment variables are missing
     """
-    missing = []
+    user_var = "POSTGRES_USER" if admin else "DB_MAINT_USER"
+    pass_var = "POSTGRES_PASSWORD" if admin else "DB_MAINT_PASSWORD"
 
     host = os.getenv("POSTGRES_HOST")
+    database = os.getenv("POSTGRES_DB")
+    user = os.getenv(user_var)
+    password = os.getenv(pass_var)
+
+    missing = []
     if not host:
         missing.append("POSTGRES_HOST")
-
-    database = os.getenv("POSTGRES_DB")
     if not database:
         missing.append("POSTGRES_DB")
-
-    user = os.getenv("DB_MAINT_USER")
     if not user:
-        missing.append("DB_MAINT_USER")
-
-    password = os.getenv("DB_MAINT_PASSWORD")
+        missing.append(user_var)
     if not password:
-        missing.append("DB_MAINT_PASSWORD")
+        missing.append(pass_var)
 
     if missing:
         raise ValueError(
             f"Missing required environment variables: {', '.join(missing)}"
         )
 
-    # Type assertions after validation (mypy doesn't narrow from the if-check)
     assert host is not None
     assert database is not None
     assert user is not None
     assert password is not None
 
+    port = os.getenv("NODEPORT_POSTGRES", "") or os.getenv("POSTGRES_PORT", "5432")
+
     return DatabaseConfig(
         host=host,
-        port=os.getenv("POSTGRES_PORT", "5432"),
+        port=port,
         database=database,
         user=user,
         password=password,
@@ -162,6 +174,6 @@ def get_backup_dir() -> Path:
     Returns:
         Path to backup directory (created if needed)
     """
-    backup_dir = get_project_root() / "backups"
-    backup_dir.mkdir(exist_ok=True)
+    backup_dir = get_project_root() / "db" / "data" / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
     return backup_dir

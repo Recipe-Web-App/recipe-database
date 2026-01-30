@@ -2,7 +2,7 @@
 # Simplifies running database management commands
 
 .PHONY: help setup schema fixtures import-nutrition backup restore export \
-        backup-nutrition restore-nutrition monitoring connect lint test clean
+        monitoring connect lint test clean
 
 # Default target
 help:
@@ -15,11 +15,10 @@ help:
 	@echo ""
 	@echo "Nutrition Data:"
 	@echo "  make import-nutrition   Download and import USDA data"
-	@echo "  make backup-nutrition   Backup nutrition tables"
-	@echo "  make restore-nutrition  Restore nutrition tables"
 	@echo ""
 	@echo "Database Operations:"
 	@echo "  make backup             Full database backup"
+	@echo "  make restore            Restore database from backup"
 	@echo "  make export             Export schema only"
 	@echo "  make connect            Interactive psql session"
 	@echo "  make monitoring         Setup monitoring user"
@@ -36,8 +35,8 @@ help:
 	@echo "  make schema VERBOSE=1"
 	@echo "  make import-nutrition DATASET=foundation_food"
 
-# Python command with optional verbose flag
-PYTHON := python
+# Python command with optional flags
+PYTHON := PYTHONPATH=python python
 VERBOSE_FLAG := $(if $(VERBOSE),-v,)
 
 # Setup
@@ -46,7 +45,7 @@ setup:
 
 # Schema and fixtures
 schema:
-	$(PYTHON) -m db_tools.load_schema $(VERBOSE_FLAG)
+	$(PYTHON) -m db_tools.load_schema $(VERBOSE_FLAG) --admin
 
 fixtures:
 	$(PYTHON) -m db_tools.load_fixtures $(VERBOSE_FLAG)
@@ -55,18 +54,12 @@ fixtures:
 import-nutrition:
 	$(PYTHON) -m db_tools.import_nutrition $(VERBOSE_FLAG) $(if $(DATASET),--dataset $(DATASET),)
 
-backup-nutrition:
-	$(PYTHON) -m db_tools.backup_nutrition $(VERBOSE_FLAG) $(if $(KEEP),--keep $(KEEP),)
-
-restore-nutrition:
-	$(PYTHON) -m db_tools.restore_nutrition $(VERBOSE_FLAG) $(if $(DATE),$(DATE),)
-
-list-backups:
-	$(PYTHON) -m db_tools.restore_nutrition --list
-
 # Database operations
 backup:
 	$(PYTHON) -m db_tools.backup_db $(VERBOSE_FLAG)
+
+restore:
+	$(PYTHON) -m db_tools.restore_db $(VERBOSE_FLAG) --admin $(if $(DATE),$(DATE),)
 
 export:
 	$(PYTHON) -m db_tools.export_schema $(VERBOSE_FLAG)
