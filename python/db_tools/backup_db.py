@@ -21,10 +21,15 @@ from pathlib import Path
 
 from cli_utils.console import (
     console,
+    get_all_table_stats,
+    get_table_sizes,
+    print_backup_size_chart,
     print_done,
     print_error,
     print_header,
     print_success,
+    print_summary_panel,
+    print_table_rows_chart,
     print_warning,
 )
 from cli_utils.database import get_database_connection, pg_dump
@@ -97,13 +102,49 @@ Default output: backups/recipe_backup_YYYY-MM-DD_HH-MM-SS.sql.gz
         console.print(f"  [bold]Output[/]    [cyan]{backup_file}[/]")
         console.print()
 
-        conn.close()
         print_success(f"Connected to database at {host}:{port}")
         console.print()
 
     except Exception as e:
         print_error(f"Database connection failed: {e}")
         return 1
+
+    # Show database statistics before backup
+    console.rule("[bold blue]📊 Database Contents")
+    console.print()
+
+    try:
+        cursor = conn.cursor()
+        table_stats = get_all_table_stats(cursor)
+        table_sizes = get_table_sizes(cursor)
+
+        total_rows = sum(table_stats.values())
+        tables_with_data = sum(1 for v in table_stats.values() if v > 0)
+        total_size = sum(table_sizes.values())
+
+        print_summary_panel(
+            {
+                "Tables": len(table_stats),
+                "Tables with data": tables_with_data,
+                "Total rows": total_rows,
+                "Database size": f"{total_size:.2f} MB",
+            },
+            title="Data to Backup",
+        )
+
+        # Show table sizes chart
+        if table_sizes:
+            print_backup_size_chart(table_sizes, title="Table Sizes (MB)")
+
+        # Show table row counts
+        if table_stats:
+            print_table_rows_chart(table_stats, title="Table Row Counts")
+
+    except Exception as e:
+        if args.verbose:
+            console.print(f"[dim]Could not gather stats: {e}[/]")
+
+    conn.close()
 
     # Create backup
     console.rule("[bold blue]📦 Creating Backup")

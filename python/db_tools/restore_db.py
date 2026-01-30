@@ -28,11 +28,14 @@ from pathlib import Path
 
 from cli_utils.console import (
     console,
+    get_all_table_stats,
     print_done,
     print_error,
     print_header,
     print_info,
     print_success,
+    print_summary_panel,
+    print_table_rows_chart,
     print_warning,
 )
 from cli_utils.database import execute_sql_file, get_database_connection
@@ -329,7 +332,36 @@ Backup files are stored in: backups/
         success = restore_backup(backup_file, admin=args.admin)
 
     if success:
+        # Show restored data statistics
+        console.rule("[bold blue]📊 Restored Data")
         console.print()
+
+        try:
+            conn = get_database_connection(admin=args.admin)
+            cursor = conn.cursor()
+            table_stats = get_all_table_stats(cursor)
+            conn.close()
+
+            # Summary panel
+            total_rows = sum(table_stats.values())
+            tables_with_data = sum(1 for v in table_stats.values() if v > 0)
+            print_summary_panel(
+                {
+                    "Tables": len(table_stats),
+                    "Tables with data": tables_with_data,
+                    "Total rows": total_rows,
+                },
+                title="Restore Complete",
+            )
+
+            # Chart of table row counts
+            if table_stats:
+                print_table_rows_chart(table_stats, title="Restored Table Data")
+
+        except Exception as e:
+            if args.verbose:
+                console.print(f"[dim]Could not gather stats: {e}[/]")
+
         print_done("Database restored successfully!")
         return 0
     else:

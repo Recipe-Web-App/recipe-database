@@ -221,6 +221,229 @@ def print_bar_chart(
     console.print()
 
 
+def print_stacked_bar_chart(
+    data: dict[str, dict[str, int | float]],
+    title: str,
+    width: int = 60,
+) -> None:
+    """Print a stacked bar chart.
+
+    Args:
+        data: Dict of category -> {label: value}
+        title: Chart title
+        width: Chart width in characters
+    """
+    if not data:
+        return
+
+    categories = list(data.keys())
+    # Get all unique labels across categories
+    all_labels: set[str] = set()
+    for cat_data in data.values():
+        all_labels.update(cat_data.keys())
+    labels = sorted(all_labels)
+
+    # Build value lists for each label
+    values_per_label = []
+    for label in labels:
+        values_per_label.append([data[cat].get(label, 0) for cat in categories])
+
+    plt.clear_figure()
+    plt.simple_stacked_bar(categories, values_per_label, labels=labels, width=width)
+    plt.title(title)
+    plt.show()
+    console.print()
+
+
+def print_horizontal_bar_chart(
+    data: Mapping[str, int | float],
+    title: str,
+    max_items: int = 15,
+    width: int = 60,
+) -> None:
+    """Print a horizontal bar chart (good for long labels).
+
+    Args:
+        data: Dict of label -> value
+        title: Chart title
+        max_items: Maximum items to show
+        width: Chart width in characters
+    """
+    if not data:
+        return
+
+    sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)[:max_items]
+    labels = [item[0][:30] for item in sorted_items]  # Truncate long labels
+    values = [item[1] for item in sorted_items]
+
+    plt.clear_figure()
+    plt.bar(labels, values, orientation="horizontal", width=width)
+    plt.title(title)
+    plt.show()
+    console.print()
+
+
+def print_multiple_bar_chart(
+    labels: list[str],
+    datasets: list[tuple[str, list[int | float]]],
+    title: str,
+    width: int = 60,
+) -> None:
+    """Print a grouped bar chart comparing multiple datasets.
+
+    Args:
+        labels: X-axis labels
+        datasets: List of (name, values) tuples
+        title: Chart title
+        width: Chart width in characters
+    """
+    if not labels or not datasets:
+        return
+
+    plt.clear_figure()
+    plt.simple_multiple_bar(
+        labels,
+        [d[1] for d in datasets],
+        labels=[d[0] for d in datasets],
+        width=width,
+    )
+    plt.title(title)
+    plt.show()
+    console.print()
+
+
+def print_schema_stats_chart(
+    tables: int,
+    functions: int,
+    triggers: int,
+    views: int,
+) -> None:
+    """Print bar chart of schema objects created."""
+    labels = ["Tables", "Functions", "Triggers", "Views"]
+    values = [tables, functions, triggers, views]
+
+    plt.clear_figure()
+    plt.simple_bar(labels, values, title="Schema Objects", width=50)
+    plt.show()
+    console.print()
+
+
+def print_table_rows_chart(
+    table_counts: dict[str, int],
+    title: str = "Table Row Counts",
+    max_tables: int = 15,
+) -> None:
+    """Print horizontal bar chart of table row counts.
+
+    Args:
+        table_counts: Dict of table_name -> row_count
+        title: Chart title
+        max_tables: Maximum tables to show
+    """
+    if not table_counts:
+        return
+
+    # Filter out empty tables and sort by count
+    non_empty = {k: v for k, v in table_counts.items() if v > 0}
+    if not non_empty:
+        console.print("[dim]No data in tables[/]")
+        return
+
+    sorted_items = sorted(non_empty.items(), key=lambda x: x[1], reverse=True)[
+        :max_tables
+    ]
+    labels = [item[0] for item in sorted_items]
+    values = [item[1] for item in sorted_items]
+
+    plt.clear_figure()
+    plt.bar(labels, values, orientation="horizontal", width=60)
+    plt.title(title)
+    plt.show()
+    console.print()
+
+
+def print_backup_size_chart(
+    table_sizes: dict[str, float],
+    title: str = "Table Sizes (MB)",
+    max_tables: int = 10,
+) -> None:
+    """Print bar chart of table sizes for backup.
+
+    Args:
+        table_sizes: Dict of table_name -> size_mb
+        title: Chart title
+        max_tables: Maximum tables to show
+    """
+    if not table_sizes:
+        return
+
+    sorted_items = sorted(table_sizes.items(), key=lambda x: x[1], reverse=True)[
+        :max_tables
+    ]
+    labels = [item[0] for item in sorted_items]
+    values = [item[1] for item in sorted_items]
+
+    plt.clear_figure()
+    plt.bar(labels, values, orientation="horizontal", width=60)
+    plt.title(title)
+    plt.show()
+    console.print()
+
+
+def get_all_table_stats(cursor: Any, schema: str = "recipe_manager") -> dict[str, int]:
+    """Get row counts for all tables in schema.
+
+    Args:
+        cursor: Database cursor
+        schema: Schema name
+
+    Returns:
+        Dict of table_name -> row_count
+    """
+    cursor.execute(
+        """
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = %s
+          AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+        """,
+        (schema,),
+    )
+    table_names = [row[0] for row in cursor.fetchall()]
+
+    stats = {}
+    for table in table_names:
+        cursor.execute(f"SELECT COUNT(*) FROM {schema}.{table}")  # nosec B608
+        stats[table] = cursor.fetchone()[0]
+
+    return stats
+
+
+def get_table_sizes(cursor: Any, schema: str = "recipe_manager") -> dict[str, float]:
+    """Get table sizes in MB.
+
+    Args:
+        cursor: Database cursor
+        schema: Schema name
+
+    Returns:
+        Dict of table_name -> size_mb
+    """
+    cursor.execute(
+        """
+        SELECT
+            tablename,
+            pg_total_relation_size(schemaname || '.' || tablename) / 1024.0 / 1024.0 as size_mb
+        FROM pg_tables
+        WHERE schemaname = %s
+        ORDER BY size_mb DESC
+        """,
+        (schema,),
+    )
+    return {row[0]: float(row[1]) for row in cursor.fetchall()}
+
+
 # =============================================================================
 # Nutrition-specific helpers (for backward compatibility)
 # =============================================================================

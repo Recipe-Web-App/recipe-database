@@ -23,10 +23,13 @@ from pathlib import Path
 from cli_utils.console import (
     console,
     create_progress,
+    get_all_table_stats,
     print_done,
     print_error,
     print_header,
     print_success,
+    print_summary_panel,
+    print_table_rows_chart,
     print_warning,
 )
 from cli_utils.database import execute_sql_file, get_database_connection
@@ -168,13 +171,19 @@ Files are processed in alphabetical order (numeric prefixes recommended).
         print_error(f"Database connection failed: {e}")
         return 1
 
+    cursor = conn.cursor()
+
+    # Get table stats before loading fixtures
+    try:
+        stats_before = get_all_table_stats(cursor)
+    except Exception:
+        stats_before = {}
+
     # Load fixtures
     console.rule("[bold blue]📄 Loading Fixtures")
     console.print()
 
     try:
-        cursor = conn.cursor()
-
         success, failure, errors = load_fixtures(
             cursor,
             fixtures_dir,
@@ -192,13 +201,49 @@ Files are processed in alphabetical order (numeric prefixes recommended).
         if args.verbose:
             console.print_exception()
         return 1
-    finally:
-        conn.close()
 
     # Print summary
     if success == 0 and failure == 0:
+        conn.close()
         print_warning("No fixtures were loaded")
         return 0
+
+    # Get table stats after loading and show charts
+    console.rule("[bold blue]📊 Loaded Data")
+    console.print()
+
+    try:
+        stats_after = get_all_table_stats(cursor)
+
+        # Calculate rows added
+        rows_added = {}
+        for table, count in stats_after.items():
+            before = stats_before.get(table, 0)
+            if count > before:
+                rows_added[table] = count - before
+
+        total_added = sum(rows_added.values())
+        tables_modified = len(rows_added)
+
+        print_summary_panel(
+            {
+                "Files executed": success,
+                "Tables modified": tables_modified,
+                "Rows added": total_added,
+            },
+            title="Fixtures Loaded",
+            success=(failure == 0),
+        )
+
+        # Show chart of rows added per table
+        if rows_added:
+            print_table_rows_chart(rows_added, title="Rows Added by Table")
+
+    except Exception as e:
+        if args.verbose:
+            console.print(f"[dim]Could not gather stats: {e}[/]")
+
+    conn.close()
 
     if failure == 0:
         print_done(f"Fixtures loaded successfully! {success} files executed.")

@@ -29,10 +29,15 @@ import httpx
 from cli_utils.console import (
     console,
     create_download_progress,
+    get_import_stats_from_db,
     print_done,
     print_error,
     print_header,
+    print_import_summary,
+    print_nutrient_coverage,
     print_success,
+    print_top_ingredients_table,
+    print_unit_chart,
     print_warning,
 )
 from cli_utils.database import get_database_connection
@@ -333,20 +338,51 @@ Download page: https://fdc.nal.usda.gov/download-datasets.html
         # Run the import
         results = import_usda_data(data_files)
 
-        # Check for errors
-        if results["errors"]:
-            print_warning(f"Import completed with {len(results['errors'])} warnings")
+        duration = time.time() - start_time
+
+        # Print import summary panel
+        print_import_summary(
+            foods_imported=results["foods_imported"],
+            foods_skipped=results["foods_skipped"],
+            portions_imported=results["portions_imported"],
+            portions_skipped=results["portions_skipped"],
+            duration=duration,
+            errors=results["errors"] if results["errors"] else None,
+        )
+
+        # Display charts if we imported data
+        if results["foods_imported"] > 0:
+            with console.status("[bold green]Generating charts..."):
+                conn = get_database_connection()
+                cursor = conn.cursor()
+                stats = get_import_stats_from_db(cursor)
+                conn.close()
+
+            # Show portions by unit chart
+            if stats.get("unit_counts"):
+                print_unit_chart(stats["unit_counts"])
+
+            # Show nutrient coverage chart
+            if stats.get("total_foods", 0) > 0:
+                print_nutrient_coverage(
+                    total_foods=stats["total_foods"],
+                    with_macros=stats.get("with_macros", 0),
+                    with_vitamins=stats.get("with_vitamins", 0),
+                    with_minerals=stats.get("with_minerals", 0),
+                )
+
+            # Show top ingredients table
+            if stats.get("top_ingredients"):
+                print_top_ingredients_table(stats["top_ingredients"])
 
         console.print()
 
         # Cleanup
         cleanup_files(zip_path, extract_dir, args.keep_files)
 
-        duration = time.time() - start_time
-        console.print()
         print_done(
             f"Import complete! {results['foods_imported']:,} foods, "
-            f"{results['portions_imported']:,} portions in {duration:.1f}s"
+            f"{results['portions_imported']:,} portions"
         )
 
         return 1 if results["errors"] else 0

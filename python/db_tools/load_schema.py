@@ -30,6 +30,7 @@ from cli_utils.console import (
     print_done,
     print_error,
     print_header,
+    print_schema_stats_chart,
     print_success,
     print_warning,
 )
@@ -182,6 +183,7 @@ SQL directories processed (in order):
     total_success = 0
     total_failure = 0
     all_errors = []
+    dir_counts: dict[str, int] = {}
 
     try:
         cursor = conn.cursor()
@@ -193,6 +195,7 @@ SQL directories processed (in order):
             total_success += success
             total_failure += failure
             all_errors.extend(errors)
+            dir_counts[directory.name] = success
 
             if failure == 0 and success > 0:
                 print_success(f"{label}: {success} files")
@@ -212,9 +215,17 @@ SQL directories processed (in order):
     finally:
         conn.close()
 
-    # Print summary
+    # Print summary with chart
     console.rule("[bold blue]📊 Summary")
     console.print()
+
+    # Show schema objects chart
+    print_schema_stats_chart(
+        tables=dir_counts.get("schema", 0),
+        functions=dir_counts.get("functions", 0),
+        triggers=dir_counts.get("triggers", 0),
+        views=dir_counts.get("views", 0),
+    )
 
     if total_failure == 0:
         print_done(f"Schema loaded successfully! {total_success} files executed.")
