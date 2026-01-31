@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS recipe_manager.ingredient_portions (
     ingredient_id BIGINT NOT NULL
         REFERENCES recipe_manager.ingredients (ingredient_id) ON DELETE CASCADE,
     portion_description VARCHAR(255) NOT NULL,
-    unit VARCHAR(50) NOT NULL,
+    unit recipe_manager.INGREDIENT_UNIT_ENUM NOT NULL,
     modifier VARCHAR(100),
     gram_weight DECIMAL(10, 3) NOT NULL,
     sequence_number INT,

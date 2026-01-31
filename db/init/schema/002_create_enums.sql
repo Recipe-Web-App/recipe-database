@@ -129,14 +129,6 @@ EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
 
--- Password strength enum
-DO $$ BEGIN CREATE TYPE recipe_manager.password_strength_enum AS ENUM (
-  'WEAK', 'MEDIUM', 'STRONG', 'VERY_STRONG'
-);
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
-
 -- User role enum
 DO $$ BEGIN CREATE TYPE recipe_manager.user_role_enum AS ENUM (
   'ADMIN', 'USER'

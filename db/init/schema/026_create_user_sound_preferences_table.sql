@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS recipe_manager.user_sound_preferences (
   ) ON DELETE CASCADE,
   notification_sounds BOOLEAN NOT NULL DEFAULT true,
   system_sounds BOOLEAN NOT NULL DEFAULT true,
-  volume_level BOOLEAN NOT NULL DEFAULT true,
+  volume_level recipe_manager.VOLUME_LEVEL_ENUM NOT NULL DEFAULT 'MEDIUM',
   mute_notifications BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
