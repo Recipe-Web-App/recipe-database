@@ -86,6 +86,16 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
             batch_count = 0
             for food_data in stream_food_nutrients(data_files.food_nutrient_csv, foods):
                 try:
+                    # Convert allergen matches to tuples for database insert
+                    allergens = (
+                        [
+                            (a.allergen_type, a.presence_type, a.confidence_score)
+                            for a in food_data.allergens
+                        ]
+                        if food_data.allergens
+                        else None
+                    )
+
                     insert_food_with_nutrients(
                         cursor,
                         fdc_id=food_data.fdc_id,
@@ -94,6 +104,7 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
                         macros=food_data.macros,
                         vitamins=food_data.vitamins,
                         minerals=food_data.minerals,
+                        allergens=allergens,
                     )
                     results["foods_imported"] += 1
                     batch_count += 1

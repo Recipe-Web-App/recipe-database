@@ -238,6 +238,7 @@ def insert_food_with_nutrients(
     macros: dict[str, float | None],
     vitamins: dict[str, float | None],
     minerals: dict[str, float | None],
+    allergens: list[tuple[str, str, float]] | None = None,
 ) -> int:
     """Insert a complete food record with all nutrient data.
 
@@ -249,6 +250,7 @@ def insert_food_with_nutrients(
         macros: Macronutrient values
         vitamins: Vitamin values
         minerals: Mineral values
+        allergens: Optional list of (allergen_type, presence_type, confidence) tuples
 
     Returns:
         The ingredient_id of the inserted record
@@ -266,7 +268,73 @@ def insert_food_with_nutrients(
     upsert_vitamins(cursor, profile_id, vitamins)
     upsert_minerals(cursor, profile_id, minerals)
 
+    # Insert allergen data if provided
+    if allergens:
+        allergen_profile_id = upsert_allergen_profile(cursor, ingredient_id)
+        upsert_ingredient_allergens(cursor, allergen_profile_id, allergens)
+
     return ingredient_id
+
+
+def upsert_allergen_profile(
+    cursor,
+    ingredient_id: int,
+    data_source: str = "LLM_INFERRED",
+    confidence_score: float = 0.75,
+) -> int:
+    """Insert or update an allergen profile, return allergen_profile_id.
+
+    Args:
+        cursor: Database cursor
+        ingredient_id: FK to ingredients table
+        data_source: Source of allergen data (default LLM_INFERRED for keyword inference)
+        confidence_score: Overall profile confidence
+
+    Returns:
+        The allergen_profile_id of the inserted/updated row
+    """
+    cursor.execute(
+        """
+        INSERT INTO recipe_manager.allergen_profiles
+            (ingredient_id, data_source, confidence_score)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (ingredient_id) DO UPDATE SET
+            data_source = EXCLUDED.data_source,
+            confidence_score = EXCLUDED.confidence_score,
+            updated_at = now()
+        RETURNING allergen_profile_id
+        """,
+        (ingredient_id, data_source, confidence_score),
+    )
+    result = cursor.fetchone()
+    return result[0]
+
+
+def upsert_ingredient_allergens(
+    cursor,
+    allergen_profile_id: int,
+    allergens: list[tuple[str, str, float]],
+) -> None:
+    """Insert or update ingredient allergens for a profile.
+
+    Args:
+        cursor: Database cursor
+        allergen_profile_id: FK to allergen_profiles table
+        allergens: List of (allergen_type, presence_type, confidence_score) tuples
+    """
+    for allergen_type, presence_type, confidence in allergens:
+        cursor.execute(
+            """
+            INSERT INTO recipe_manager.ingredient_allergens
+                (allergen_profile_id, allergen_type, presence_type, confidence_score)
+            VALUES (%s, %s::recipe_manager.allergen_enum,
+                    %s::recipe_manager.presence_type_enum, %s)
+            ON CONFLICT (allergen_profile_id, allergen_type) DO UPDATE SET
+                presence_type = EXCLUDED.presence_type,
+                confidence_score = EXCLUDED.confidence_score
+            """,
+            (allergen_profile_id, allergen_type, presence_type, confidence),
+        )
 
 
 def get_fdc_id_to_ingredient_id_map(cursor) -> dict[int, int]:
