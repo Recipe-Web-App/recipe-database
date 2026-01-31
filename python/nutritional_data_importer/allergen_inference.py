@@ -21,13 +21,20 @@ class AllergenMatch(NamedTuple):
     confidence_score: float
 
 
+# Non-dairy "butter" patterns (peanut butter, almond butter, cocoa butter, etc.)
+_NON_DAIRY_BUTTER_PATTERN = re.compile(
+    r"\b(peanut|almond|cashew|sunflower|seed|nut|cocoa|shea|mango|apple|body)"
+    r"\s+butter\b",
+    re.I,
+)
+
 # Keyword patterns: (regex, allergen, confidence)
 # Ordered by specificity - more specific patterns first
 ALLERGEN_PATTERNS: list[tuple[re.Pattern, str, float]] = [
     # Milk/Dairy
     (re.compile(r"\bmilk\b", re.I), "MILK", 0.90),
-    (re.compile(r"\bcream\b", re.I), "MILK", 0.85),
-    (re.compile(r"\bbutter\b", re.I), "MILK", 0.85),
+    (re.compile(r"\bcream\b(?!\s+of\s+tartar)", re.I), "MILK", 0.85),
+    (re.compile(r"\bbutter\b", re.I), "MILK", 0.85),  # Filtered in infer_allergens()
     (re.compile(r"\bcheese\b", re.I), "MILK", 0.90),
     (re.compile(r"\byogurt\b", re.I), "MILK", 0.90),
     (re.compile(r"\bwhey\b", re.I), "MILK", 0.90),
@@ -139,7 +146,18 @@ def infer_allergens(description: str) -> list[AllergenMatch]:
     """
     matches: dict[str, AllergenMatch] = {}
 
+    # Pre-check: is this a non-dairy butter product?
+    has_non_dairy_butter = _NON_DAIRY_BUTTER_PATTERN.search(description) is not None
+
     for pattern, allergen, confidence in ALLERGEN_PATTERNS:
+        # Skip dairy "butter" match if this is a non-dairy butter product
+        if (
+            has_non_dairy_butter
+            and allergen == "MILK"
+            and pattern.pattern == r"\bbutter\b"
+        ):
+            continue
+
         # Keep highest confidence match for each allergen
         is_new = allergen not in matches
         is_higher_confidence = (
