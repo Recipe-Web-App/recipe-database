@@ -52,6 +52,12 @@ DO $$ BEGIN CREATE TYPE recipe_manager.allergen_enum AS ENUM (
 EXCEPTION
 WHEN duplicate_object THEN null;
 END $$;
+-- Enum for allergen presence types
+DO $$ BEGIN CREATE TYPE recipe_manager.presence_type_enum
+  AS ENUM ('CONTAINS', 'MAY_CONTAIN', 'TRACES');
+EXCEPTION
+WHEN duplicate_object THEN null;
+END $$;
 -- Enum for food groups (based on OpenFoodFacts taxonomy)
 DO $$ BEGIN CREATE TYPE recipe_manager.food_group_enum AS ENUM (
   -- Plant-based whole foods

@@ -289,3 +289,17 @@ CREATE TRIGGER trigger_update_ingredient_portions_updated_at
 BEFORE UPDATE ON recipe_manager.ingredient_portions
 FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.update_timestamp();
+
+-- Allergen profiles
+DROP TRIGGER IF EXISTS trigger_set_allergen_profiles_created_at
+ON recipe_manager.allergen_profiles;
+CREATE TRIGGER trigger_set_allergen_profiles_created_at
+BEFORE INSERT ON recipe_manager.allergen_profiles
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.set_created_at();
+DROP TRIGGER IF EXISTS trigger_update_allergen_profiles_updated_at
+ON recipe_manager.allergen_profiles;
+CREATE TRIGGER trigger_update_allergen_profiles_updated_at
+BEFORE UPDATE ON recipe_manager.allergen_profiles
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.update_timestamp();

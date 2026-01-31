@@ -455,6 +455,7 @@ def print_import_summary(
     portions_imported: int,
     portions_skipped: int,
     duration: float,
+    allergen_profiles: int = 0,
     errors: list[str] | None = None,
 ) -> None:
     """Print nutrition import summary panel."""
@@ -480,6 +481,11 @@ def print_import_summary(
     if portions_skipped > 0:
         summary_lines.append(
             f"  [bold]Portions skipped[/]     [dim]{portions_skipped:,}[/]"
+        )
+
+    if allergen_profiles > 0:
+        summary_lines.append(
+            f"  [bold]Allergen profiles[/]    [cyan]{allergen_profiles:,}[/]"
         )
 
     summary_lines.append(f"  [bold]Duration[/]             [cyan]{duration:.1f}s[/]")
@@ -545,6 +551,35 @@ def print_top_ingredients_table(ingredients: list[tuple[str, int]]) -> None:
     )
 
 
+def print_allergen_chart(
+    allergen_counts: dict[str, int],
+    total_profiles: int,
+    total_allergens: int,
+) -> None:
+    """Print bar chart of allergen distribution.
+
+    Args:
+        allergen_counts: Dict mapping allergen type to count
+        total_profiles: Total number of allergen profiles
+        total_allergens: Total number of ingredient allergen entries
+    """
+    if not allergen_counts:
+        return
+
+    # Take top 10 allergens
+    top_allergens = dict(list(allergen_counts.items())[:10])
+
+    plt.clear_figure()
+    plt.simple_bar(
+        list(top_allergens.keys()),
+        list(top_allergens.values()),
+        title=f"Allergens Detected ({total_profiles:,} profiles, {total_allergens:,} entries)",
+        width=60,
+    )
+    plt.show()
+    console.print()
+
+
 def get_import_stats_from_db(cursor: Any) -> dict[str, Any]:
     """Query database for import statistics to display in charts.
 
@@ -605,5 +640,20 @@ def get_import_stats_from_db(cursor: Any) -> dict[str, Any]:
         LIMIT 10
     """)
     stats["top_ingredients"] = [(row[0], row[1]) for row in cursor.fetchall()]
+
+    # Get allergen statistics
+    cursor.execute("""
+        SELECT ia.allergen_type, COUNT(*) as count
+        FROM recipe_manager.ingredient_allergens ia
+        GROUP BY ia.allergen_type
+        ORDER BY count DESC
+    """)
+    stats["allergen_counts"] = {row[0]: row[1] for row in cursor.fetchall()}
+
+    cursor.execute("SELECT COUNT(*) FROM recipe_manager.allergen_profiles")
+    stats["total_allergen_profiles"] = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM recipe_manager.ingredient_allergens")
+    stats["total_ingredient_allergens"] = cursor.fetchone()[0]
 
     return stats

@@ -45,6 +45,7 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
         "foods_skipped": 0,
         "portions_imported": 0,
         "portions_skipped": 0,
+        "allergen_profiles_created": 0,
         "total_foods_in_source": 0,
         "errors": [],
     }
@@ -79,13 +80,23 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
         # Step 2: Stream food_nutrient.csv with progress bar
         with create_progress() as progress:
             task = progress.add_task(
-                "[cyan]Importing nutrients",
+                "[cyan]Importing nutrients + allergens",
                 total=len(foods),
             )
 
             batch_count = 0
             for food_data in stream_food_nutrients(data_files.food_nutrient_csv, foods):
                 try:
+                    # Convert allergen matches to tuples for database insert
+                    allergens = (
+                        [
+                            (a.allergen_type, a.presence_type, a.confidence_score)
+                            for a in food_data.allergens
+                        ]
+                        if food_data.allergens
+                        else None
+                    )
+
                     insert_food_with_nutrients(
                         cursor,
                         fdc_id=food_data.fdc_id,
@@ -94,9 +105,23 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
                         macros=food_data.macros,
                         vitamins=food_data.vitamins,
                         minerals=food_data.minerals,
+                        allergens=allergens,
                     )
                     results["foods_imported"] += 1
+                    if allergens:
+                        results["allergen_profiles_created"] += 1
                     batch_count += 1
+
+                    # Update progress with allergen count every 100 items
+                    if results["foods_imported"] % 100 == 0:
+                        allergen_count = results["allergen_profiles_created"]
+                        progress.update(
+                            task,
+                            description=(
+                                f"[cyan]Importing nutrients + allergens "
+                                f"[dim]({allergen_count:,} allergens)[/]"
+                            ),
+                        )
                     progress.advance(task)
 
                     if batch_count >= 1000:

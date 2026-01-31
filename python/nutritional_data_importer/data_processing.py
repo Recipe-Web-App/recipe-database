@@ -15,6 +15,7 @@ from typing import Iterator
 
 import pandas as pd
 
+from .allergen_inference import AllergenMatch, infer_allergens
 from .data_cleaning import (
     apply_conversion_factor,
     clean_description,
@@ -36,6 +37,7 @@ class FoodNutrientData:
         self.macros: dict[str, float | None] = {}
         self.vitamins: dict[str, float | None] = {}
         self.minerals: dict[str, float | None] = {}
+        self.allergens: list[AllergenMatch] = infer_allergens(description)
 
     def add_nutrient(self, nutrient_id: int, amount: float) -> bool:
         """Add a nutrient value to the appropriate category.
