@@ -30,6 +30,7 @@ from cli_utils.console import (
     console,
     create_download_progress,
     get_import_stats_from_db,
+    print_allergen_chart,
     print_done,
     print_error,
     print_header,
@@ -347,6 +348,7 @@ Download page: https://fdc.nal.usda.gov/download-datasets.html
             portions_imported=results["portions_imported"],
             portions_skipped=results["portions_skipped"],
             duration=duration,
+            allergen_profiles=results.get("allergen_profiles_created", 0),
             errors=results["errors"] if results["errors"] else None,
         )
 
@@ -374,6 +376,14 @@ Download page: https://fdc.nal.usda.gov/download-datasets.html
             # Show top ingredients table
             if stats.get("top_ingredients"):
                 print_top_ingredients_table(stats["top_ingredients"])
+
+            # Show allergen chart
+            if stats.get("allergen_counts"):
+                print_allergen_chart(
+                    allergen_counts=stats["allergen_counts"],
+                    total_profiles=stats.get("total_allergen_profiles", 0),
+                    total_allergens=stats.get("total_ingredient_allergens", 0),
+                )
 
         console.print()
 

@@ -45,6 +45,7 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
         "foods_skipped": 0,
         "portions_imported": 0,
         "portions_skipped": 0,
+        "allergen_profiles_created": 0,
         "total_foods_in_source": 0,
         "errors": [],
     }
@@ -79,7 +80,7 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
         # Step 2: Stream food_nutrient.csv with progress bar
         with create_progress() as progress:
             task = progress.add_task(
-                "[cyan]Importing nutrients",
+                "[cyan]Importing nutrients + allergens",
                 total=len(foods),
             )
 
@@ -107,7 +108,20 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
                         allergens=allergens,
                     )
                     results["foods_imported"] += 1
+                    if allergens:
+                        results["allergen_profiles_created"] += 1
                     batch_count += 1
+
+                    # Update progress with allergen count every 100 items
+                    if results["foods_imported"] % 100 == 0:
+                        allergen_count = results["allergen_profiles_created"]
+                        progress.update(
+                            task,
+                            description=(
+                                f"[cyan]Importing nutrients + allergens "
+                                f"[dim]({allergen_count:,} allergens)[/]"
+                            ),
+                        )
                     progress.advance(task)
 
                     if batch_count >= 1000:
