@@ -456,6 +456,7 @@ def print_import_summary(
     portions_skipped: int,
     duration: float,
     allergen_profiles: int = 0,
+    food_groups: int = 0,
     errors: list[str] | None = None,
 ) -> None:
     """Print nutrition import summary panel."""
@@ -486,6 +487,11 @@ def print_import_summary(
     if allergen_profiles > 0:
         summary_lines.append(
             f"  [bold]Allergen profiles[/]    [cyan]{allergen_profiles:,}[/]"
+        )
+
+    if food_groups > 0:
+        summary_lines.append(
+            f"  [bold]Food groups[/]          [cyan]{food_groups:,}[/]"
         )
 
     summary_lines.append(f"  [bold]Duration[/]             [cyan]{duration:.1f}s[/]")
@@ -580,6 +586,30 @@ def print_allergen_chart(
     console.print()
 
 
+def print_food_group_chart(
+    food_group_counts: dict[str, int],
+    total_with_groups: int,
+) -> None:
+    """Print bar chart of food group distribution.
+
+    Args:
+        food_group_counts: Dict mapping food group to count
+        total_with_groups: Total number of foods with assigned food groups
+    """
+    if not food_group_counts:
+        return
+
+    plt.clear_figure()
+    plt.simple_bar(
+        list(food_group_counts.keys()),
+        list(food_group_counts.values()),
+        title=f"Food Groups ({total_with_groups:,} assigned)",
+        width=60,
+    )
+    plt.show()
+    console.print()
+
+
 def get_import_stats_from_db(cursor: Any) -> dict[str, Any]:
     """Query database for import statistics to display in charts.
 
@@ -655,5 +685,22 @@ def get_import_stats_from_db(cursor: Any) -> dict[str, Any]:
 
     cursor.execute("SELECT COUNT(*) FROM recipe_manager.ingredient_allergens")
     stats["total_ingredient_allergens"] = cursor.fetchone()[0]
+
+    # Get food group statistics
+    cursor.execute("""
+        SELECT food_group::text, COUNT(*) as count
+        FROM recipe_manager.nutrition_profiles
+        WHERE food_group IS NOT NULL
+        GROUP BY food_group
+        ORDER BY count DESC
+    """)
+    stats["food_group_counts"] = {row[0]: row[1] for row in cursor.fetchall()}
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM recipe_manager.nutrition_profiles
+        WHERE food_group IS NOT NULL AND food_group != 'UNKNOWN'
+    """)
+    stats["total_with_food_groups"] = cursor.fetchone()[0]
 
     return stats

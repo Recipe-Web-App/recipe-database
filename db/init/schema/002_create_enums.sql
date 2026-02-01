@@ -61,7 +61,7 @@ END $$;
 -- Enum for food groups (based on OpenFoodFacts taxonomy)
 DO $$ BEGIN CREATE TYPE recipe_manager.food_group_enum AS ENUM (
   -- Plant-based whole foods
-  'VEGETABLES', 'FRUITS', 'GRAINS', 'LEGUMES', 'NUTS_SEEDS',
+  'VEGETABLES', 'FRUITS', 'GRAINS', 'LEGUMES', 'NUTS_SEEDS', 'SPICES_HERBS',
   -- Animal products
   'MEAT', 'POULTRY', 'SEAFOOD', 'DAIRY',
   -- Processed and manufactured foods
@@ -124,14 +124,6 @@ END $$;
 -- Volume level enum
 DO $$ BEGIN CREATE TYPE recipe_manager.volume_level_enum AS ENUM (
   'MUTED', 'LOW', 'MEDIUM', 'HIGH'
-);
-EXCEPTION
-WHEN duplicate_object THEN null;
-END $$;
-
--- Password strength enum
-DO $$ BEGIN CREATE TYPE recipe_manager.password_strength_enum AS ENUM (
-  'WEAK', 'MEDIUM', 'STRONG', 'VERY_STRONG'
 );
 EXCEPTION
 WHEN duplicate_object THEN null;

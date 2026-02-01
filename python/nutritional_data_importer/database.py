@@ -83,6 +83,7 @@ def upsert_nutrition_profile(
     ingredient_id: int,
     serving_size_g: float = 100.0,
     fdc_data_type: str | None = None,
+    food_group: str | None = None,
 ) -> int:
     """Insert or update a nutrition profile, return nutrition_profile_id.
 
@@ -91,6 +92,7 @@ def upsert_nutrition_profile(
         ingredient_id: FK to ingredients table
         serving_size_g: Reference serving size in grams
         fdc_data_type: USDA data type (foundation_food, sr_legacy_food, etc.)
+        food_group: Food group category from USDA mapping
 
     Returns:
         The nutrition_profile_id of the inserted/updated row
@@ -98,15 +100,16 @@ def upsert_nutrition_profile(
     cursor.execute(
         """
         INSERT INTO recipe_manager.nutrition_profiles
-            (ingredient_id, serving_size_g, data_source, fdc_data_type)
-        VALUES (%s, %s, 'USDA', %s)
+            (ingredient_id, serving_size_g, data_source, fdc_data_type, food_group)
+        VALUES (%s, %s, 'USDA', %s, %s::recipe_manager.food_group_enum)
         ON CONFLICT (ingredient_id) DO UPDATE SET
             serving_size_g = EXCLUDED.serving_size_g,
             fdc_data_type = EXCLUDED.fdc_data_type,
+            food_group = EXCLUDED.food_group,
             updated_at = now()
         RETURNING nutrition_profile_id
         """,
-        (ingredient_id, serving_size_g, fdc_data_type),
+        (ingredient_id, serving_size_g, fdc_data_type, food_group),
     )
     result = cursor.fetchone()
     return result[0]
@@ -239,6 +242,7 @@ def insert_food_with_nutrients(
     vitamins: dict[str, float | None],
     minerals: dict[str, float | None],
     allergens: list[tuple[str, str, float]] | None = None,
+    food_group: str | None = None,
 ) -> int:
     """Insert a complete food record with all nutrient data.
 
@@ -251,6 +255,7 @@ def insert_food_with_nutrients(
         vitamins: Vitamin values
         minerals: Mineral values
         allergens: Optional list of (allergen_type, presence_type, confidence) tuples
+        food_group: Food group category from USDA mapping
 
     Returns:
         The ingredient_id of the inserted record
@@ -260,7 +265,11 @@ def insert_food_with_nutrients(
 
     # Insert nutrition profile
     profile_id = upsert_nutrition_profile(
-        cursor, ingredient_id, serving_size_g=100.0, fdc_data_type=data_type
+        cursor,
+        ingredient_id,
+        serving_size_g=100.0,
+        fdc_data_type=data_type,
+        food_group=food_group,
     )
 
     # Insert nutrient data

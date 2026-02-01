@@ -134,7 +134,7 @@ BEGIN
         NEW.user_id,
         TRUE,
         TRUE,
-        TRUE,
+        'MEDIUM'::recipe_manager.volume_level_enum,
         FALSE
     );
 
