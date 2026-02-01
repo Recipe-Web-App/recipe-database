@@ -33,6 +33,7 @@ from cli_utils.console import (
     print_allergen_chart,
     print_done,
     print_error,
+    print_food_group_chart,
     print_header,
     print_import_summary,
     print_nutrient_coverage,
@@ -349,6 +350,7 @@ Download page: https://fdc.nal.usda.gov/download-datasets.html
             portions_skipped=results["portions_skipped"],
             duration=duration,
             allergen_profiles=results.get("allergen_profiles_created", 0),
+            food_groups=results.get("food_groups_assigned", 0),
             errors=results["errors"] if results["errors"] else None,
         )
 
@@ -383,6 +385,13 @@ Download page: https://fdc.nal.usda.gov/download-datasets.html
                     allergen_counts=stats["allergen_counts"],
                     total_profiles=stats.get("total_allergen_profiles", 0),
                     total_allergens=stats.get("total_ingredient_allergens", 0),
+                )
+
+            # Show food group chart
+            if stats.get("food_group_counts"):
+                print_food_group_chart(
+                    food_group_counts=stats["food_group_counts"],
+                    total_with_groups=stats.get("total_with_food_groups", 0),
                 )
 
         console.print()

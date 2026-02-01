@@ -46,6 +46,7 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
         "portions_imported": 0,
         "portions_skipped": 0,
         "allergen_profiles_created": 0,
+        "food_groups_assigned": 0,
         "total_foods_in_source": 0,
         "errors": [],
     }
@@ -106,20 +107,25 @@ def import_usda_data(data_files: USDADataFiles) -> dict[str, Any]:
                         vitamins=food_data.vitamins,
                         minerals=food_data.minerals,
                         allergens=allergens,
+                        food_group=food_data.food_group,
                     )
                     results["foods_imported"] += 1
                     if allergens:
                         results["allergen_profiles_created"] += 1
+                    if food_data.food_group and food_data.food_group != "UNKNOWN":
+                        results["food_groups_assigned"] += 1
                     batch_count += 1
 
-                    # Update progress with allergen count every 100 items
+                    # Update progress with allergen and food group counts every 100 items
                     if results["foods_imported"] % 100 == 0:
                         allergen_count = results["allergen_profiles_created"]
+                        food_group_count = results["food_groups_assigned"]
                         progress.update(
                             task,
                             description=(
-                                f"[cyan]Importing nutrients + allergens "
-                                f"[dim]({allergen_count:,} allergens)[/]"
+                                f"[cyan]Importing nutrients + allergens + food groups "
+                                f"[dim]({allergen_count:,} allergens, "
+                                f"{food_group_count:,} groups)[/]"
                             ),
                         )
                     progress.advance(task)

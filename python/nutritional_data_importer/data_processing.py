@@ -21,6 +21,7 @@ from .data_cleaning import (
     clean_description,
     clean_numeric_value,
 )
+from .food_group_mapping import get_food_group
 from .usda_mapping import TRACKED_NUTRIENT_IDS, get_db_column_for_nutrient
 
 logger = logging.getLogger(__name__)
@@ -29,11 +30,18 @@ logger = logging.getLogger(__name__)
 class FoodNutrientData:
     """Container for a food item with its nutrients."""
 
-    def __init__(self, fdc_id: int, description: str, data_type: str):
+    def __init__(
+        self,
+        fdc_id: int,
+        description: str,
+        data_type: str,
+        food_category_id: int | None = None,
+    ):
         """Initialize with food metadata from USDA food.csv."""
         self.fdc_id = fdc_id
         self.description = description
         self.data_type = data_type
+        self.food_group = get_food_group(food_category_id)
         self.macros: dict[str, float | None] = {}
         self.vitamins: dict[str, float | None] = {}
         self.minerals: dict[str, float | None] = {}
@@ -86,18 +94,18 @@ class FoodNutrientData:
         return all(self.macros.get(m) is not None for m in core_macros)
 
 
-def parse_foods_csv(food_csv: Path) -> dict[int, tuple[str, str]]:
-    """Parse food.csv to extract fdc_id -> (description, data_type) mapping.
+def parse_foods_csv(food_csv: Path) -> dict[int, tuple[str, str, int | None]]:
+    """Parse food.csv to extract fdc_id -> (description, data_type, category_id) mapping.
 
     Args:
         food_csv: Path to food.csv
 
     Returns:
-        Dict mapping fdc_id to (description, data_type)
+        Dict mapping fdc_id to (description, data_type, food_category_id)
     """
     logger.info(f"Parsing food.csv from {food_csv}")
 
-    foods: dict[int, tuple[str, str]] = {}
+    foods: dict[int, tuple[str, str, int | None]] = {}
 
     # Read in chunks to handle large files
     for chunk in pd.read_csv(food_csv, chunksize=10000, low_memory=False):
@@ -105,6 +113,7 @@ def parse_foods_csv(food_csv: Path) -> dict[int, tuple[str, str]]:
             fdc_id = row.get("fdc_id")
             description = row.get("description")
             data_type = row.get("data_type", "")
+            food_category_id = row.get("food_category_id")
 
             if pd.isna(fdc_id) or pd.isna(description):
                 continue
@@ -112,8 +121,15 @@ def parse_foods_csv(food_csv: Path) -> dict[int, tuple[str, str]]:
             try:
                 fdc_id = int(fdc_id)
                 description = clean_description(str(description))
+                category_id = (
+                    int(food_category_id) if not pd.isna(food_category_id) else None
+                )
                 if description:
-                    foods[fdc_id] = (description, str(data_type) if data_type else "")
+                    foods[fdc_id] = (
+                        description,
+                        str(data_type) if data_type else "",
+                        category_id,
+                    )
             except (ValueError, TypeError):
                 continue
 
@@ -153,7 +169,7 @@ def parse_nutrients_csv(nutrient_csv: Path) -> dict[int, str]:
 
 def stream_food_nutrients(
     food_nutrient_csv: Path,
-    foods: dict[int, tuple[str, str]],
+    foods: dict[int, tuple[str, str, int | None]],
     chunk_size: int = 50000,
 ) -> Iterator[FoodNutrientData]:
     """Stream food nutrient data, yielding complete FoodNutrientData objects.
@@ -164,7 +180,7 @@ def stream_food_nutrients(
 
     Args:
         food_nutrient_csv: Path to food_nutrient.csv
-        foods: Dict from parse_foods_csv
+        foods: Dict from parse_foods_csv (fdc_id -> description, data_type, category_id)
         chunk_size: Rows per chunk for memory efficiency
 
     Yields:
@@ -207,8 +223,10 @@ def stream_food_nutrients(
                     yield current_food
 
                 # Start new food
-                description, data_type = foods[fdc_id]
-                current_food = FoodNutrientData(fdc_id, description, data_type)
+                description, data_type, food_category_id = foods[fdc_id]
+                current_food = FoodNutrientData(
+                    fdc_id, description, data_type, food_category_id
+                )
                 current_fdc_id = fdc_id
 
             # Add nutrient to current food

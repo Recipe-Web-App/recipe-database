@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS recipe_manager.nutrition_profiles (
   serving_size_g DECIMAL(10, 2) NOT NULL DEFAULT 100,
   data_source VARCHAR(50) NOT NULL DEFAULT 'USDA',
   fdc_data_type VARCHAR(50),
+  food_group recipe_manager.FOOD_GROUP_ENUM,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -16,6 +17,10 @@ CREATE TABLE IF NOT EXISTS recipe_manager.nutrition_profiles (
 -- Index for ingredient lookups
 CREATE INDEX IF NOT EXISTS idx_nutrition_profiles_ingredient_id
 ON recipe_manager.nutrition_profiles (ingredient_id);
+
+-- Index for food group filtering
+CREATE INDEX IF NOT EXISTS idx_nutrition_profiles_food_group
+ON recipe_manager.nutrition_profiles (food_group);
 
 -- Documentation
 COMMENT ON TABLE recipe_manager.nutrition_profiles
@@ -29,3 +34,5 @@ COMMENT ON COLUMN recipe_manager.nutrition_profiles.data_source
 IS 'Source of nutritional data (e.g., USDA, manual entry)';
 COMMENT ON COLUMN recipe_manager.nutrition_profiles.fdc_data_type
 IS 'USDA FDC data type (e.g., foundation_food, sr_legacy_food)';
+COMMENT ON COLUMN recipe_manager.nutrition_profiles.food_group
+IS 'Food group category mapped from USDA food_category_id';

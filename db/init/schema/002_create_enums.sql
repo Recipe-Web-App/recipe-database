@@ -61,7 +61,7 @@ END $$;
 -- Enum for food groups (based on OpenFoodFacts taxonomy)
 DO $$ BEGIN CREATE TYPE recipe_manager.food_group_enum AS ENUM (
   -- Plant-based whole foods
-  'VEGETABLES', 'FRUITS', 'GRAINS', 'LEGUMES', 'NUTS_SEEDS',
+  'VEGETABLES', 'FRUITS', 'GRAINS', 'LEGUMES', 'NUTS_SEEDS', 'SPICES_HERBS',
   -- Animal products
   'MEAT', 'POULTRY', 'SEAFOOD', 'DAIRY',
   -- Processed and manufactured foods

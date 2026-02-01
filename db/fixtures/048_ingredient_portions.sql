@@ -18,9 +18,9 @@ SELECT
 FROM recipe_manager.ingredients AS i
 CROSS JOIN (
     VALUES
-        ('1 cup', 'CUP', NULL::VARCHAR, 200.0, 1, 'MANUAL'),
-        ('1 tbsp', 'TBSP', NULL::VARCHAR, 12.5, 2, 'MANUAL'),
-        ('1 tsp', 'TSP', NULL::VARCHAR, 4.2, 3, 'MANUAL')
+        ('1 cup', 'CUP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 200.0, 1, 'MANUAL'),
+        ('1 tbsp', 'TBSP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 12.5, 2, 'MANUAL'),
+        ('1 tsp', 'TSP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 4.2, 3, 'MANUAL')
 ) AS v (portion_description, unit, modifier, gram_weight, sequence_number, data_source)
 WHERE i.name = 'Sugar'
 ON CONFLICT (ingredient_id, portion_description) DO NOTHING;
@@ -41,9 +41,9 @@ SELECT
 FROM recipe_manager.ingredients AS i
 CROSS JOIN (
     VALUES
-        ('1 tbsp', 'TBSP', NULL::VARCHAR, 18.0, 1, 'MANUAL'),
-        ('1 tsp', 'TSP', NULL::VARCHAR, 6.0, 2, 'MANUAL'),
-        ('1 dash', 'PIECE', 'dash', 0.4, 3, 'MANUAL')
+        ('1 tbsp', 'TBSP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 18.0, 1, 'MANUAL'),
+        ('1 tsp', 'TSP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 6.0, 2, 'MANUAL'),
+        ('1 dash', 'PIECE'::recipe_manager.ingredient_unit_enum, 'dash', 0.4, 3, 'MANUAL')
 ) AS v (portion_description, unit, modifier, gram_weight, sequence_number, data_source)
 WHERE i.name = 'Salt'
 ON CONFLICT (ingredient_id, portion_description) DO NOTHING;
@@ -64,9 +64,9 @@ SELECT
 FROM recipe_manager.ingredients AS i
 CROSS JOIN (
     VALUES
-        ('1 cup', 'CUP', NULL::VARCHAR, 125.0, 1, 'MANUAL'),
-        ('1 cup, sifted', 'CUP', 'sifted', 115.0, 2, 'MANUAL'),
-        ('1 tbsp', 'TBSP', NULL::VARCHAR, 7.8, 3, 'MANUAL')
+        ('1 cup', 'CUP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 125.0, 1, 'MANUAL'),
+        ('1 cup, sifted', 'CUP'::recipe_manager.ingredient_unit_enum, 'sifted', 115.0, 2, 'MANUAL'),
+        ('1 tbsp', 'TBSP'::recipe_manager.ingredient_unit_enum, NULL::varchar, 7.8, 3, 'MANUAL')
 ) AS v (portion_description, unit, modifier, gram_weight, sequence_number, data_source)
 WHERE i.name = 'Flour'
 ON CONFLICT (ingredient_id, portion_description) DO NOTHING;
