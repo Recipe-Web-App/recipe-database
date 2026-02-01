@@ -704,3 +704,183 @@ def get_import_stats_from_db(cursor: Any) -> dict[str, Any]:
     stats["total_with_food_groups"] = cursor.fetchone()[0]
 
     return stats
+
+
+def print_pricing_import_summary(
+    food_groups_seeded: int,
+    ingredients_imported: int,
+    ingredients_skipped: int,
+    duration: float,
+    errors: list[str] | None = None,
+) -> None:
+    """Print pricing import summary panel.
+
+    Args:
+        food_groups_seeded: Number of food group prices seeded
+        ingredients_imported: Number of ingredient prices imported
+        ingredients_skipped: Number of items skipped (no match)
+        duration: Import duration in seconds
+        errors: Optional list of error messages
+    """
+    success = errors is None or len(errors) == 0
+
+    print_summary_panel(
+        {
+            "Food groups seeded": food_groups_seeded,
+            "Ingredients priced": ingredients_imported,
+            "Skipped (no match)": ingredients_skipped,
+            "Duration": f"{duration:.1f}s",
+        },
+        title="Pricing Import Summary",
+        success=success,
+    )
+
+    if errors:
+        console.print()
+        console.print("[bold yellow]Errors:[/]")
+        for error in errors[:10]:
+            console.print(f"  [dim]• {error}[/]")
+        if len(errors) > 10:
+            console.print(f"  [dim]... and {len(errors) - 10} more[/]")
+
+
+def print_pricing_coverage_chart(
+    by_source: dict[str, int],
+    total_ingredients: int,
+) -> None:
+    """Print bar chart showing pricing coverage by data source.
+
+    Args:
+        by_source: Dict mapping data source to count
+        total_ingredients: Total number of ingredients in database
+    """
+    if not by_source:
+        return
+
+    total_priced = sum(by_source.values())
+    coverage_pct = (
+        (total_priced / total_ingredients * 100) if total_ingredients > 0 else 0
+    )
+
+    plt.clear_figure()
+    plt.simple_bar(
+        list(by_source.keys()),
+        list(by_source.values()),
+        title=f"Pricing by Source ({total_priced:,} priced, {coverage_pct:.1f}% coverage)",
+        width=60,
+    )
+    plt.show()
+    console.print()
+
+
+def print_price_distribution_chart(
+    price_buckets: dict[str, int],
+) -> None:
+    """Print histogram showing price distribution across ingredients.
+
+    Args:
+        price_buckets: Dict mapping price range labels to counts
+                       e.g., {"$0-0.50": 45, "$0.50-1": 30, ...}
+    """
+    if not price_buckets:
+        return
+
+    total = sum(price_buckets.values())
+
+    plt.clear_figure()
+    plt.simple_bar(
+        list(price_buckets.keys()),
+        list(price_buckets.values()),
+        title=f"Price Distribution per 100g ({total:,} ingredients)",
+        width=60,
+    )
+    plt.show()
+    console.print()
+
+
+def print_food_group_price_chart(
+    by_food_group: dict[str, float],
+) -> None:
+    """Print bar chart showing average price by food group.
+
+    Args:
+        by_food_group: Dict mapping food group to average price per 100g
+    """
+    if not by_food_group:
+        return
+
+    # Sort by price for visual clarity
+    sorted_groups = dict(
+        sorted(by_food_group.items(), key=lambda x: x[1], reverse=True)
+    )
+
+    plt.clear_figure()
+    plt.simple_bar(
+        list(sorted_groups.keys()),
+        list(sorted_groups.values()),
+        title="Average Price per 100g by Food Group",
+        width=60,
+    )
+    plt.show()
+    console.print()
+
+
+def get_pricing_stats_from_db(cursor: Any) -> dict[str, Any]:
+    """Query database for pricing statistics to display in charts.
+
+    Args:
+        cursor: Database cursor
+
+    Returns:
+        Dict with pricing coverage, distribution, and food group stats
+    """
+    stats: dict[str, Any] = {}
+
+    # Get total ingredients
+    cursor.execute("SELECT COUNT(*) FROM recipe_manager.ingredients")
+    stats["total_ingredients"] = cursor.fetchone()[0]
+
+    # Get pricing counts by source
+    cursor.execute("""
+        SELECT data_source, COUNT(*) as count
+        FROM recipe_manager.ingredient_pricing
+        GROUP BY data_source
+        ORDER BY count DESC
+    """)
+    stats["by_source"] = {row[0]: row[1] for row in cursor.fetchall()}
+
+    # Get price distribution (buckets)
+    cursor.execute("""
+        SELECT
+            CASE
+                WHEN price_per_100g < 0.25 THEN '$0-0.25'
+                WHEN price_per_100g < 0.50 THEN '$0.25-0.50'
+                WHEN price_per_100g < 1.00 THEN '$0.50-1.00'
+                WHEN price_per_100g < 2.00 THEN '$1.00-2.00'
+                WHEN price_per_100g < 5.00 THEN '$2.00-5.00'
+                ELSE '$5.00+'
+            END as bucket,
+            COUNT(*) as count
+        FROM recipe_manager.ingredient_pricing
+        GROUP BY bucket
+        ORDER BY MIN(price_per_100g)
+    """)
+    stats["price_distribution"] = {row[0]: row[1] for row in cursor.fetchall()}
+
+    # Get average price by food group (from the lookup view)
+    cursor.execute("""
+        SELECT
+            COALESCE(food_group::text, 'UNKNOWN') as fg,
+            AVG(price_per_100g) as avg_price
+        FROM recipe_manager.vw_ingredient_pricing_lookup
+        WHERE price_per_100g IS NOT NULL
+        GROUP BY food_group
+        ORDER BY avg_price DESC
+    """)
+    stats["by_food_group"] = {row[0]: float(row[1]) for row in cursor.fetchall()}
+
+    # Get food group pricing counts
+    cursor.execute("SELECT COUNT(*) FROM recipe_manager.food_group_pricing")
+    stats["food_group_count"] = cursor.fetchone()[0]
+
+    return stats

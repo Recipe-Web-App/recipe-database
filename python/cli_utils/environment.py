@@ -163,8 +163,8 @@ def get_data_dir() -> Path:
     Returns:
         Path to data directory (created if needed)
     """
-    data_dir = get_project_root() / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = get_project_root() / "db" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
 
 
