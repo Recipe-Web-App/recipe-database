@@ -1,5 +1,5 @@
 # PostgreSQL database image for recipe management
-FROM postgres:15.15 AS database
+FROM postgres:17.7 AS database
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

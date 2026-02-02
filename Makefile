@@ -1,7 +1,7 @@
 # Recipe Database Makefile
 # Simplifies running database management commands
 
-.PHONY: help setup schema fixtures import-nutrition backup restore export \
+.PHONY: help setup schema fixtures import-nutrition import-pricing backup restore export \
         monitoring connect lint test clean
 
 # Default target
@@ -14,7 +14,8 @@ help:
 	@echo "  make fixtures           Load test fixtures"
 	@echo ""
 	@echo "Nutrition Data:"
-	@echo "  make import-nutrition   Download and import USDA data"
+	@echo "  make import-nutrition   Download and import USDA nutrition data"
+	@echo "  make import-pricing     Import pricing data from USDA/Kaggle"
 	@echo ""
 	@echo "Database Operations:"
 	@echo "  make backup             Full database backup"
@@ -29,11 +30,15 @@ help:
 	@echo ""
 	@echo "Options (pass via environment):"
 	@echo "  VERBOSE=1               Enable verbose output"
-	@echo "  DATASET=foundation_food Override default dataset"
+	@echo "  DATASET=foundation_food Override default dataset (import-nutrition)"
+	@echo "  FORCE_DOWNLOAD=1        Force re-download of files"
+	@echo "  KEEP_FILES=1            Keep downloaded files after import"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make schema VERBOSE=1"
 	@echo "  make import-nutrition DATASET=foundation_food"
+	@echo "  make import-pricing"
+	@echo "  make import-pricing KEEP_FILES=1 VERBOSE=1"
 
 # Python command with optional flags
 PYTHON := PYTHONPATH=python python
@@ -53,6 +58,12 @@ fixtures:
 # Nutrition data management
 import-nutrition:
 	$(PYTHON) -m db_tools.import_nutrition $(VERBOSE_FLAG) $(if $(DATASET),--dataset $(DATASET),)
+
+# Pricing data management
+import-pricing:
+	$(PYTHON) -m db_tools.import_pricing $(VERBOSE_FLAG) \
+		$(if $(FORCE_DOWNLOAD),--force-download,) \
+		$(if $(KEEP_FILES),--keep-files,)
 
 # Database operations
 backup:

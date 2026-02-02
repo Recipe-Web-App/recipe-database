@@ -44,6 +44,9 @@ def load_fixtures(
 ) -> tuple[int, int, list[str]]:
     """Load fixture files from directory.
 
+    Uses SAVEPOINTs to isolate each file, allowing failures without
+    aborting the entire transaction.
+
     Args:
         cursor: Database cursor
         fixtures_dir: Path to fixtures directory
@@ -80,13 +83,20 @@ def load_fixtures(
     with create_progress() as progress:
         task = progress.add_task("[cyan]Loading fixtures", total=len(sql_files))
 
-        for sql_file in sql_files:
+        for i, sql_file in enumerate(sql_files):
+            savepoint_name = f"fixture_{i}"
             try:
+                # Create savepoint before each file
+                cursor.execute(f"SAVEPOINT {savepoint_name}")
                 execute_sql_file(cursor, sql_file, verbose=verbose)
+                # Release savepoint on success
+                cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                 success += 1
                 if verbose:
                     console.print(f"  [green]✓[/] {sql_file.name}")
             except Exception as e:
+                # Rollback to savepoint on failure
+                cursor.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name}")
                 failure += 1
                 error_msg = f"{sql_file.name}: {e}"
                 errors.append(error_msg)
@@ -121,6 +131,11 @@ Files are processed in alphabetical order (numeric prefixes recommended).
     )
 
     parser.add_argument(
+        "--admin",
+        action="store_true",
+        help="Use admin credentials (POSTGRES_USER) instead of maintenance user",
+    )
+    parser.add_argument(
         "--pattern",
         "-p",
         help="Glob pattern to filter fixture files (e.g., '001_*', '*users*')",
@@ -153,12 +168,13 @@ Files are processed in alphabetical order (numeric prefixes recommended).
     console.print()
 
     try:
-        conn = get_database_connection()
+        conn = get_database_connection(admin=args.admin)
         host = conn.info.host or "localhost"
         port = conn.info.port or 5432
 
         console.print(f"  [bold]Host[/]       [cyan]{host}:{port}[/]")
         console.print(f"  [bold]Database[/]   [cyan]{conn.info.dbname}[/]")
+        console.print(f"  [bold]User[/]       [cyan]{conn.info.user}[/]")
         console.print(f"  [bold]Fixtures[/]   [cyan]{fixtures_dir}[/]")
         if args.pattern:
             console.print(f"  [bold]Pattern[/]    [cyan]{args.pattern}[/]")

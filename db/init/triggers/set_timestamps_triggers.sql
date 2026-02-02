@@ -303,3 +303,25 @@ CREATE TRIGGER trigger_update_allergen_profiles_updated_at
 BEFORE UPDATE ON recipe_manager.allergen_profiles
 FOR EACH ROW
 EXECUTE FUNCTION recipe_manager.update_timestamp();
+
+-- Ingredient pricing
+DROP TRIGGER IF EXISTS trigger_set_ingredient_pricing_created_at
+ON recipe_manager.ingredient_pricing;
+CREATE TRIGGER trigger_set_ingredient_pricing_created_at
+BEFORE INSERT ON recipe_manager.ingredient_pricing
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.set_created_at();
+DROP TRIGGER IF EXISTS trigger_update_ingredient_pricing_updated_at
+ON recipe_manager.ingredient_pricing;
+CREATE TRIGGER trigger_update_ingredient_pricing_updated_at
+BEFORE UPDATE ON recipe_manager.ingredient_pricing
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.update_timestamp();
+
+-- Food group pricing (updated_at only, no created_at since it's a reference table)
+DROP TRIGGER IF EXISTS trigger_update_food_group_pricing_updated_at
+ON recipe_manager.food_group_pricing;
+CREATE TRIGGER trigger_update_food_group_pricing_updated_at
+BEFORE UPDATE ON recipe_manager.food_group_pricing
+FOR EACH ROW
+EXECUTE FUNCTION recipe_manager.update_timestamp();

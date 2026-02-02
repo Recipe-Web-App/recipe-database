@@ -419,3 +419,94 @@ def insert_ingredient_portions(
             skipped += 1
 
     return inserted, skipped
+
+
+def upsert_food_group_pricing(
+    cursor,
+    food_group: str,
+    price_per_100g: float,
+    data_source: str = "USDA_FMAP",
+    notes: str | None = None,
+) -> None:
+    """Insert or update food group pricing.
+
+    Args:
+        cursor: Database cursor
+        food_group: Food group enum value (e.g., 'VEGETABLES', 'MEAT')
+        price_per_100g: Average price per 100 grams in USD
+        data_source: Source of price data
+        notes: Optional notes about the pricing
+    """
+    cursor.execute(
+        """
+        INSERT INTO recipe_manager.food_group_pricing
+            (food_group, avg_price_per_100g, data_source, notes)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (food_group) DO UPDATE SET
+            avg_price_per_100g = EXCLUDED.avg_price_per_100g,
+            data_source = EXCLUDED.data_source,
+            notes = EXCLUDED.notes,
+            updated_at = now()
+        """,
+        (food_group, price_per_100g, data_source, notes),
+    )
+
+
+def upsert_ingredient_pricing(
+    cursor,
+    ingredient_id: int,
+    price_per_100g: float,
+    data_source: str,
+    source_year: int | None = None,
+    notes: str | None = None,
+) -> int:
+    """Insert or update ingredient pricing, return pricing_id.
+
+    Args:
+        cursor: Database cursor
+        ingredient_id: FK to ingredients table
+        price_per_100g: Price per 100 grams in USD
+        data_source: Source of price data (USDA_FVP, USDA_MEAT, KAGGLE, MANUAL)
+        source_year: Year the price data was collected
+        notes: Optional notes about the pricing
+
+    Returns:
+        The pricing_id of the inserted/updated row
+    """
+    cursor.execute(
+        """
+        INSERT INTO recipe_manager.ingredient_pricing
+            (ingredient_id, price_per_100g, data_source, source_year, notes)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (ingredient_id) DO UPDATE SET
+            price_per_100g = EXCLUDED.price_per_100g,
+            data_source = EXCLUDED.data_source,
+            source_year = EXCLUDED.source_year,
+            notes = EXCLUDED.notes,
+            updated_at = now()
+        RETURNING pricing_id
+        """,
+        (ingredient_id, price_per_100g, data_source, source_year, notes),
+    )
+    result = cursor.fetchone()
+    return result[0]
+
+
+def get_ingredients_without_pricing(cursor) -> list[tuple[int, str]]:
+    """Get ingredients that don't have pricing data yet.
+
+    Args:
+        cursor: Database cursor
+
+    Returns:
+        List of (ingredient_id, name) tuples for ingredients without pricing
+    """
+    cursor.execute("""
+        SELECT i.ingredient_id, i.name
+        FROM recipe_manager.ingredients i
+        LEFT JOIN recipe_manager.ingredient_pricing ip
+            ON ip.ingredient_id = i.ingredient_id
+        WHERE ip.pricing_id IS NULL
+        ORDER BY i.name
+        """)
+    return cursor.fetchall()
