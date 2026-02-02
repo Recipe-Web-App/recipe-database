@@ -121,11 +121,12 @@ def download_file(url: str, dest: Path, force: bool = False) -> bool:
         return False
 
 
-def cleanup_files(files: list[Path], keep: bool) -> None:
-    """Clean up downloaded files.
+def cleanup_files(files: list[Path], data_dir: Path, keep: bool) -> None:
+    """Clean up downloaded files and the pricing subdirectory.
 
     Args:
         files: List of file paths to clean up
+        data_dir: The pricing data directory to remove if empty
         keep: If True, keep files instead of deleting
     """
     if keep:
@@ -138,6 +139,11 @@ def cleanup_files(files: list[Path], keep: bool) -> None:
         if file_path.exists():
             file_path.unlink()
             console.print(f"  [dim]Removed {file_path.name}[/]")
+
+    # Only remove the pricing directory itself, not parent directories
+    if data_dir.exists() and not any(data_dir.iterdir()):
+        data_dir.rmdir()
+        console.print(f"  [dim]Removed directory {data_dir.name}/[/]")
 
 
 def seed_food_group_pricing(cursor, fmap_path: Path | None = None) -> int:
@@ -612,7 +618,7 @@ Data Sources:
         conn.close()
 
         # Cleanup
-        cleanup_files(downloaded_files, args.keep_files)
+        cleanup_files(downloaded_files, data_dir, args.keep_files)
 
         print_done(
             f"Pricing import complete! {total_imported} imported, "
@@ -624,14 +630,14 @@ Data Sources:
     except KeyboardInterrupt:
         console.print()
         print_warning("Import interrupted by user")
-        cleanup_files(downloaded_files, args.keep_files)
+        cleanup_files(downloaded_files, data_dir, args.keep_files)
         return 130
 
     except Exception as e:
         print_error(f"Import failed: {e}")
         if args.verbose:
             console.print_exception()
-        cleanup_files(downloaded_files, args.keep_files)
+        cleanup_files(downloaded_files, data_dir, args.keep_files)
         return 1
 
 
