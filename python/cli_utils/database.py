@@ -45,9 +45,9 @@ def get_database_connection(admin: bool = False) -> PgConnection:
     )
     conn.autocommit = False
 
-    # Set search path to schema
+    # Set search path to schema (include public for extensions like pg_trgm)
     with conn.cursor() as cursor:
-        cursor.execute(f"SET search_path TO {config.schema};")
+        cursor.execute(f"SET search_path TO {config.schema}, public;")
     conn.commit()
 
     return conn
