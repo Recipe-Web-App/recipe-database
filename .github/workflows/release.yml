@@ -81,7 +81,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18.1
+        image: postgres:18.2
         env:
           POSTGRES_PASSWORD: test_password # pragma: allowlist secret
           POSTGRES_USER: test_user
