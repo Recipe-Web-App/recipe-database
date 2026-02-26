@@ -3,7 +3,7 @@
 Welcome to Beads! This repository uses **Beads** for issue tracking - a modern,
 AI-native tool designed to live directly in your codebase alongside your code.
 
-## What is Beads
+## What is Beads?
 
 Beads is issue tracking that lives in your repo, making it perfect for AI coding
 agents and developers who want their issues close to their code. No web UI
@@ -30,8 +30,8 @@ bd show <issue-id>
 bd update <issue-id> --status in_progress
 bd update <issue-id> --status done
 
-# Sync with git remote
-bd sync
+# Sync with Dolt remote
+bd dolt push
 ```
 
 ### Working with Issues
@@ -43,7 +43,7 @@ Issues in Beads are:
 - **Branch-aware**: Issues can follow your branch workflow
 - **Always in sync**: Auto-syncs with your commits
 
-## Why Beads
+## Why Beads?
 
 ✨ **AI-Native Design**
 
