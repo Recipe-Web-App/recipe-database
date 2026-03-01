@@ -44,14 +44,8 @@ from cli_utils.console import (
 )
 from cli_utils.database import get_database_connection
 from cli_utils.environment import get_data_dir, load_env
-
-# Add parent to path for nutritional_data_importer imports
-sys.path.insert(0, str(Path(__file__).parents[1]))
-
-from nutritional_data_importer.csv_validation import (  # noqa: E402
-    validate_usda_directory,
-)
-from nutritional_data_importer.import_core import import_usda_data  # noqa: E402
+from nutritional_data_importer.csv_validation import validate_usda_directory
+from nutritional_data_importer.import_core import import_usda_data
 
 # USDA FoodData Central configuration
 USDA_BASE_URL = "https://fdc.nal.usda.gov/fdc-datasets"
