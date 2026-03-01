@@ -23,7 +23,8 @@ various environments.
 - **Docker** (20.10+) - Container runtime
 - **kubectl** (1.24+) - Kubernetes CLI
 - **minikube** (1.28+) - Local Kubernetes (development only)
-- **Python** (3.8+) - Data processing scripts
+- **UV** (0.4+) - Python package manager (handles Python installation
+  automatically)
 - **PostgreSQL client tools** - Database interaction (psql, pg_dump, etc.)
 
 #### Production Environment
@@ -62,9 +63,8 @@ docker info
 kubectl version --client
 kubectl cluster-info
 
-# Check Python
-python3 --version
-pip3 --version
+# Check UV (manages Python automatically)
+uv --version
 
 # Check PostgreSQL tools
 psql --version

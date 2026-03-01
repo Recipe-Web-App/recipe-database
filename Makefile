@@ -41,12 +41,12 @@ help:
 	@echo "  make import-pricing KEEP_FILES=1 VERBOSE=1"
 
 # Python command with optional flags
-PYTHON := PYTHONPATH=python python
+PYTHON := PYTHONPATH=python uv run
 VERBOSE_FLAG := $(if $(VERBOSE),-v,)
 
 # Setup
 setup:
-	pip install -r python/requirements.txt
+	uv sync
 
 # Schema and fixtures
 schema:

@@ -49,19 +49,15 @@ cp .env.example .env  # Edit with your configuration
 ./scripts/containerManagement/cleanup-supporting-services.sh
 ```
 
-### Python (Nutritional Data Importer)
+### Python (UV)
 
-The Python importer is run automatically via the shell script:
+Python dependencies are managed with UV. Run `make setup` (which calls
+`uv sync`) to install dependencies into a project-local `.venv`.
 
 ```bash
-# Import USDA FoodData Central nutritional data
-./scripts/dbManagement/import-nutritional-data.sh --dataset foundation_food
-
-# Available options:
-#   --dataset NAME    foundation_food or sr_legacy_food
-#   --date DATE       Dataset release date (e.g., 2024-04-18)
-#   --force-download  Force re-download even if files exist
-#   --keep-files      Keep downloaded files after completion
+make setup                    # Install/sync Python dependencies (uv sync)
+make import-nutrition         # Import USDA FoodData Central nutritional data
+make import-pricing           # Import pricing data
 ```
 
 ### Linting and Formatting
@@ -220,7 +216,7 @@ Grafana dashboard: `monitoring/grafana-dashboards/postgresql-overview.json`
 
 - Kubernetes cluster (minikube for local dev), kubectl, Docker
 - PostgreSQL client tools (`psql`, `pg_dump`) - `apt install postgresql-client`
-- Python 3.9+ with venv support
+- UV (0.4+) - Python package manager
 - jq, envsubst
 
 ## Additional Docs
