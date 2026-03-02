@@ -273,7 +273,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18.2
+        image: postgres:18.3
         env:
           POSTGRES_PASSWORD: test_password # pragma: allowlist secret
           POSTGRES_DB: recipe_test
@@ -328,7 +328,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18.2
+        image: postgres:18.3
         env:
           POSTGRES_PASSWORD: test_password # pragma: allowlist secret
           POSTGRES_DB: recipe_test
